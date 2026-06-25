@@ -64,7 +64,6 @@ object AiVideoGalleryManager {
         metadata: VideoMetadata = VideoMetadata()
     ): AiGeneratedVideo = withContext(Dispatchers.IO) {
         ensureDefaultGroup()
-        cleanupExpiredTemporary()
         val id = UUID.randomUUID().toString()
         val file = File(videoDir, "$id.mp4")
         val byteCount = runCatching {

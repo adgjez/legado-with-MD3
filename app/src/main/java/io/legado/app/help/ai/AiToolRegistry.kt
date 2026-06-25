@@ -120,7 +120,6 @@ object AiToolRegistry {
         "query_read_records",
         "list_book_sources",
         "search_book_source",
-        "search_web_tavily",
         "create_book_source",
         "get_book_source",
         "update_book_source",

@@ -60,7 +60,6 @@ object AiImageGalleryManager {
         metadata: ImageMetadata = ImageMetadata()
     ): AiGeneratedImage = withContext(Dispatchers.IO) {
         ensureDefaultGroup()
-        cleanupExpiredTemporary()
         val id = UUID.randomUUID().toString()
         val tempFile = File(imageDir, "$id.tmp")
         val byteCount = runCatching {

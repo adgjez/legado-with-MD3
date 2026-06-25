@@ -157,6 +157,8 @@ internal object AiToolExecutor {
     private val asyncVideoToolNames = setOf(
         "generate_video",
         "generate_video_from_image",
+        "generate_video_keyframes",
+        "generate_video_multi_image",
         "continue_video_from_frame"
     )
 
