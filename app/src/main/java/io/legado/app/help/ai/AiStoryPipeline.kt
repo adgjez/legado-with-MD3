@@ -3,7 +3,6 @@ package io.legado.app.help.ai
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.AiStoryPlaylist
-import io.legado.app.data.entities.AiStoryScene
 import io.legado.app.help.ai.AiCharacterConsistency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
