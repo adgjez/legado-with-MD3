@@ -137,6 +137,16 @@ object AgnesVideoTemplate : AiVideoApiTemplate {
     override val displayName = "Agnes AI Video 2.0"
     override val description = "Agnes AI 视频模型，支持 1080P 音画同出"
 
+    /**
+     * 服务器 submit 返回: { id, task_id, video_id, status, progress, ... }
+     * 优先用 video_id（status 查询用 video_id），回退 task_id/id
+     */
+    override fun parseSubmitResult(json: JSONObject): String {
+        return json.optString("video_id")
+            .ifBlank { json.optString("task_id") }
+            .ifBlank { json.optString("id") }
+    }
+
     override fun buildSubmitPayload(
         prompt: String,
         model: String,
@@ -164,10 +174,14 @@ object AgnesVideoTemplate : AiVideoApiTemplate {
     }
 
     override fun parseDownloadUrl(json: JSONObject): String? {
-        // Agnes AI 响应格式: { output: { video_url: "..." } } 或标准格式
+        // Agnes AI 响应格式:
+        //   { output: { video_url: "..." } }
+        //   { video_url: "..." }  (顶层)
+        //   { video_id: "..." }   (需拼接 CDN URL)
         json.optJSONObject("output")?.let { output ->
             output.optString("video_url").takeIf { it.isNotBlank() }?.let { return it }
         }
+        json.optString("video_url").takeIf { it.isNotBlank() && it.startsWith("http") }?.let { return it }
         return videoFromOpenAiJson(json)
     }
 

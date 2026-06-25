@@ -2129,7 +2129,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
                 name = "Agnes AI 视频",
                 template = "agnes_video_2.0",
                 baseUrl = agnesBaseUrl,
-                model = "agnes-video-2.0"
+                model = "agnes-video-v2.0"
             )
         }
         if (aiCurrentVideoProviderId.isNullOrBlank() || aiCurrentVideoProviderId == videoProviderId) {

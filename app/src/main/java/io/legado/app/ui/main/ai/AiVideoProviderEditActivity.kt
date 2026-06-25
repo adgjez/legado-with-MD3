@@ -250,10 +250,10 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
                                     value = modelText,
                                     onValueChange = { modelText = it },
                                     label = "模型名称",
-                                    placeholder = "agnes-video-2.0",
+                                    placeholder = "agnes-video-v2.0",
                                     suggestions = listOf(
-                                        "agnes-video-2.0",
                                         "agnes-video-v2.0",
+                                        "agnes-video-2.0",
                                         "cogvideox",
                                         "stable-video-diffusion"
                                     ),
@@ -549,7 +549,7 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
             listOf(
                 VideoModelPreset(
                     name = "Agnes AI Video 2.0",
-                    model = "agnes-video-2.0",
+                    model = "agnes-video-v2.0",
                     template = "agnes_video_2.0",
                     submitEndpoint = "/videos/generations",
                     statusEndpoint = "/videos/generations/{id}",
