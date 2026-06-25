@@ -1565,27 +1565,27 @@ class ReadBookActivity : BaseReadBookActivity(),
                 androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
             )
             setContent {
-                var currentIntensity by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(intensity) }
-                var currentResult by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(result) }
-                var original by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(originalText) }
+                val currentIntensity = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(intensity) }
+                val currentResult = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(result) }
+                val original = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(originalText) }
 
                 io.legado.app.ui.main.ai.AiSanitizeDiffDialog(
-                    originalText = original,
-                    sanitizedResult = currentResult,
-                    intensity = currentIntensity,
+                    originalText = original.value,
+                    sanitizedResult = currentResult.value,
+                    intensity = currentIntensity.value,
                     onIntensityChange = { newIntensity ->
-                        currentIntensity = newIntensity
+                        currentIntensity.value = newIntensity
                         lifecycleScope.launch {
                             val newResult = withContext(Dispatchers.IO) {
-                                AiSanitizeService.sanitize(original, newIntensity, bookKey, chapterIndex, null)
+                                AiSanitizeService.sanitize(original.value, newIntensity, bookKey, chapterIndex, null)
                             }
-                            currentResult = newResult
+                            currentResult.value = newResult
                         }
                     },
                     onAccept = {
-                        val sanitizedText = currentResult.sanitizedText
-                        val acceptIntensity = currentIntensity
-                        val acceptOriginal = original
+                        val sanitizedText = currentResult.value.sanitizedText
+                        val acceptIntensity = currentIntensity.value
+                        val acceptOriginal = original.value
                         // Persist the accepted sanitized text into the cache so that
                         // ContentProcessor picks it up on the next content load, then
                         // force-reload the current chapter to display it.
@@ -1617,9 +1617,9 @@ class ReadBookActivity : BaseReadBookActivity(),
                     onRetry = {
                         lifecycleScope.launch {
                             val newResult = withContext(Dispatchers.IO) {
-                                AiSanitizeService.sanitize(original, currentIntensity, bookKey, chapterIndex, null)
+                                AiSanitizeService.sanitize(original.value, currentIntensity.value, bookKey, chapterIndex, null)
                             }
-                            currentResult = newResult
+                            currentResult.value = newResult
                         }
                     },
                     onDismiss = {
