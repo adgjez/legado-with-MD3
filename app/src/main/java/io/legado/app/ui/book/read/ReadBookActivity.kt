@@ -434,8 +434,6 @@ class ReadBookActivity : BaseReadBookActivity(),
         binding.cursorRight.setColorFilter(accentColor)
         binding.cursorLeft.setOnTouchListener(this)
         binding.cursorRight.setOnTouchListener(this)
-        binding.readAiPanel.attach(this)
-        binding.readAiSummaryPanel.attach(this)
         binding.readAloudPlayerPanel.attach(this, this)
         ReadAloudAppCapsuleHost.attachReadBook(this, binding.root) {
             openReadAloudPanelFromExternalRequest()

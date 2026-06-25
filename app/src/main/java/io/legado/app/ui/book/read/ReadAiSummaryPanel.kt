@@ -47,7 +47,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.LifecycleOwner
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookAiChapterSummary
@@ -105,6 +104,9 @@ class ReadAiSummaryPanel @JvmOverloads constructor(
         clipToPadding = false
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
         addView(composeView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        composeView.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
         composeView.setContent {
             ReadAiSummaryContent(
                 state = uiState,
@@ -116,11 +118,6 @@ class ReadAiSummaryPanel @JvmOverloads constructor(
                 onClose = ::close
             )
         }
-    }
-
-    @Suppress("UNUSED_PARAMETER")
-    fun attach(lifecycleOwner: LifecycleOwner) {
-        composeView.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
     }
 
     fun open(book: Book, chapter: BookChapter, content: String, anchor: ReadAiFloatingPanel.Anchor? = null) {

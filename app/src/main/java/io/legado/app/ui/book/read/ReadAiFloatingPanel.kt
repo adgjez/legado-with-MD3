@@ -67,7 +67,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.LifecycleOwner
 import io.legado.app.R
 import io.legado.app.data.entities.AiAgentJob
 import io.legado.app.data.entities.AiAgentSession
@@ -166,6 +165,9 @@ class ReadAiFloatingPanel @JvmOverloads constructor(
             composeView,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
         )
+        composeView.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
         composeView.setContent {
             ReadAiPanelContent(
                 messages = messages,
@@ -201,11 +203,6 @@ class ReadAiFloatingPanel @JvmOverloads constructor(
             }
             insets
         }
-    }
-
-    @Suppress("UNUSED_PARAMETER")
-    fun attach(lifecycleOwner: LifecycleOwner) {
-        composeView.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
     }
 
     fun open(readContext: ReadContext, anchor: Anchor? = null) {
