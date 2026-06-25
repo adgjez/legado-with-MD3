@@ -32,6 +32,7 @@ object DatabaseMigrations {
             migration_113_114,
             migration_114_115,
             migration_115_116,
+            migration_116_117,
         )
     }
 
@@ -299,6 +300,109 @@ object DatabaseMigrations {
         """.trimIndent())
             db.execSQL("CREATE INDEX IF NOT EXISTS `idx_voucher_task` ON `ai_gen_vouchers` (`taskId`)")
             db.execSQL("CREATE INDEX IF NOT EXISTS `idx_voucher_created` ON `ai_gen_vouchers` (`createdAt`)")
+        }
+    }
+
+    /**
+     * v116 → v117: Entity definitions were updated (added @ColumnInfo defaultValue
+     * and explicit @Index names to 10 AI entities, plus @ColumnInfo to AiGeneratedImage).
+     * This changes the Room identity hash. The actual DB schema from migrations 108-116
+     * is already correct, so this migration only needs to exist to trigger Room's
+     * onUpgrade → updateIdentity, which writes the new hash to room_master_table.
+     * For users who installed the first fork build (where onCreate used entities without
+     * @ColumnInfo), we also recreate the affected tables to ensure schema matches.
+     */
+    private val migration_116_117 = object : Migration(116, 117) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Recreate AI tables that may have been created by Room onCreate
+            // (without DEFAULT clauses) in the first fork build.
+            // Using CREATE-INSERT-DROP-RENAME to preserve user data.
+
+            // ai_purified_text_cache
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_purified_text_cache_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bookKey` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL DEFAULT -1, `intensity` TEXT NOT NULL DEFAULT '', `providerId` TEXT NOT NULL DEFAULT '', `result` TEXT NOT NULL, `createdAt` INTEGER NOT NULL DEFAULT 0)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `idx_purify_cache` ON `ai_purified_text_cache_new` (`bookKey`, `chapterIndex`, `intensity`)")
+            db.execSQL("INSERT INTO `ai_purified_text_cache_new` SELECT * FROM `ai_purified_text_cache`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_purified_text_cache`")
+            db.execSQL("ALTER TABLE `ai_purified_text_cache_new` RENAME TO `ai_purified_text_cache`")
+
+            // ai_generated_videos
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_generated_videos_new` (`id` TEXT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `prompt` TEXT NOT NULL DEFAULT '', `negativePrompt` TEXT NOT NULL DEFAULT '', `providerId` TEXT NOT NULL DEFAULT '', `providerName` TEXT NOT NULL DEFAULT '', `model` TEXT NOT NULL DEFAULT '', `localPath` TEXT NOT NULL DEFAULT '', `thumbnailPath` TEXT NOT NULL DEFAULT '', `duration` INTEGER NOT NULL DEFAULT 0, `width` INTEGER NOT NULL DEFAULT 0, `height` INTEGER NOT NULL DEFAULT 0, `originalSource` TEXT NOT NULL DEFAULT '', `inputImageId` TEXT, `tailImageId` TEXT, `referenceImageId` TEXT, `parentVideoId` TEXT, `bookKey` TEXT NOT NULL DEFAULT '', `bookName` TEXT NOT NULL DEFAULT '', `bookAuthor` TEXT NOT NULL DEFAULT '', `chapterKey` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL DEFAULT -1, `chapterTitle` TEXT NOT NULL DEFAULT '', `sourceType` TEXT NOT NULL DEFAULT '', `sourceText` TEXT NOT NULL DEFAULT '', `generationMode` TEXT NOT NULL DEFAULT 'text_to_video', `cameraControl` TEXT NOT NULL DEFAULT '', `remoteTaskId` TEXT NOT NULL DEFAULT '', `groupId` TEXT, `needsTranscode` INTEGER NOT NULL DEFAULT 0, `costActual` TEXT NOT NULL DEFAULT '', `favorite` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL DEFAULT 0, `updatedAt` INTEGER NOT NULL DEFAULT 0, `lastAccessTime` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
+            db.execSQL("INSERT INTO `ai_generated_videos_new` SELECT * FROM `ai_generated_videos`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_generated_videos`")
+            db.execSQL("ALTER TABLE `ai_generated_videos_new` RENAME TO `ai_generated_videos`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_groupId` ON `ai_generated_videos` (`groupId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_favorite` ON `ai_generated_videos` (`favorite`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_createdAt` ON `ai_generated_videos` (`createdAt`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_bookKey` ON `ai_generated_videos` (`bookKey`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_sourceType` ON `ai_generated_videos` (`sourceType`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_parentVideoId` ON `ai_generated_videos` (`parentVideoId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_videos_lastAccessTime` ON `ai_generated_videos` (`lastAccessTime`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_video_book_chapter` ON `ai_generated_videos` (`bookKey`, `chapterIndex`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_video_lru` ON `ai_generated_videos` (`favorite`, `lastAccessTime`)")
+
+            // ai_video_groups
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_video_groups_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `createdAt` INTEGER NOT NULL DEFAULT 0, `sortOrder` INTEGER NOT NULL DEFAULT 0)")
+            db.execSQL("INSERT INTO `ai_video_groups_new` SELECT * FROM `ai_video_groups`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_video_groups`")
+            db.execSQL("ALTER TABLE `ai_video_groups_new` RENAME TO `ai_video_groups`")
+
+            // ai_gen_tasks
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_gen_tasks_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `modality` TEXT NOT NULL DEFAULT '', `status` TEXT NOT NULL DEFAULT 'pending', `priority` INTEGER NOT NULL DEFAULT 0, `providerId` TEXT NOT NULL DEFAULT '', `providerName` TEXT NOT NULL DEFAULT '', `model` TEXT NOT NULL DEFAULT '', `prompt` TEXT NOT NULL DEFAULT '', `negativePrompt` TEXT NOT NULL DEFAULT '', `parentTaskId` TEXT, `remoteTaskId` TEXT NOT NULL DEFAULT '', `resultId` TEXT NOT NULL DEFAULT '', `resultPath` TEXT NOT NULL DEFAULT '', `previewUrl` TEXT NOT NULL DEFAULT '', `inputImageId` TEXT, `referenceImageId` TEXT, `voucherId` TEXT, `emotionalHint` TEXT NOT NULL DEFAULT '', `costEstimate` REAL NOT NULL DEFAULT 0, `costActual` REAL NOT NULL DEFAULT 0, `bookKey` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL DEFAULT -1, `sourceType` TEXT NOT NULL DEFAULT '', `progress` INTEGER NOT NULL DEFAULT 0, `errorMessage` TEXT NOT NULL DEFAULT '', `retryCount` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL DEFAULT 0, `updatedAt` INTEGER NOT NULL DEFAULT 0, `lastAccessTime` INTEGER NOT NULL DEFAULT 0)")
+            db.execSQL("INSERT INTO `ai_gen_tasks_new` SELECT * FROM `ai_gen_tasks`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_gen_tasks`")
+            db.execSQL("ALTER TABLE `ai_gen_tasks_new` RENAME TO `ai_gen_tasks`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_task_status_priority` ON `ai_gen_tasks` (`status`, `priority`, `createdAt`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_gen_tasks_modality` ON `ai_gen_tasks` (`modality`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_gen_tasks_providerId` ON `ai_gen_tasks` (`providerId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_gen_tasks_bookKey` ON `ai_gen_tasks` (`bookKey`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_gen_tasks_createdAt` ON `ai_gen_tasks` (`createdAt`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_task_parent` ON `ai_gen_tasks` (`parentTaskId`)")
+
+            // ai_story_playlists
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_story_playlists_new` (`id` TEXT NOT NULL, `bookKey` TEXT NOT NULL DEFAULT '', `bookName` TEXT NOT NULL DEFAULT '', `chapterKey` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL DEFAULT -1, `chapterTitle` TEXT NOT NULL DEFAULT '', `sceneCount` INTEGER NOT NULL DEFAULT 0, `totalDuration` INTEGER NOT NULL DEFAULT 0, `bgmAudioId` TEXT NOT NULL DEFAULT '', `status` TEXT NOT NULL DEFAULT 'pending', `createdAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
+            db.execSQL("INSERT INTO `ai_story_playlists_new` SELECT * FROM `ai_story_playlists`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_story_playlists`")
+            db.execSQL("ALTER TABLE `ai_story_playlists_new` RENAME TO `ai_story_playlists`")
+
+            // ai_story_scenes
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_story_scenes_new` (`id` TEXT NOT NULL, `playlistId` TEXT NOT NULL DEFAULT '', `sceneIndex` INTEGER NOT NULL DEFAULT 0, `narrativeText` TEXT NOT NULL DEFAULT '', `visualPrompt` TEXT NOT NULL DEFAULT '', `cameraControl` TEXT NOT NULL DEFAULT '', `audioPrompt` TEXT NOT NULL DEFAULT '', `duration` INTEGER NOT NULL DEFAULT 5000, `imageId` TEXT NOT NULL DEFAULT '', `videoId` TEXT NOT NULL DEFAULT '', `audioId` TEXT NOT NULL DEFAULT '', `status` TEXT NOT NULL DEFAULT 'pending', `error` TEXT NOT NULL DEFAULT '', `createdAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
+            db.execSQL("INSERT INTO `ai_story_scenes_new` SELECT * FROM `ai_story_scenes`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_story_scenes`")
+            db.execSQL("ALTER TABLE `ai_story_scenes_new` RENAME TO `ai_story_scenes`")
+
+            // ai_generated_audios
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_generated_audios_new` (`id` TEXT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `prompt` TEXT NOT NULL DEFAULT '', `providerId` TEXT NOT NULL DEFAULT '', `providerName` TEXT NOT NULL DEFAULT '', `model` TEXT NOT NULL DEFAULT '', `localPath` TEXT NOT NULL DEFAULT '', `duration` INTEGER NOT NULL DEFAULT 0, `format` TEXT NOT NULL DEFAULT 'mp3', `audioType` TEXT NOT NULL DEFAULT 'music', `inputText` TEXT NOT NULL DEFAULT '', `groupId` TEXT, `costActual` REAL NOT NULL DEFAULT 0, `bookKey` TEXT NOT NULL DEFAULT '', `bookName` TEXT NOT NULL DEFAULT '', `bookAuthor` TEXT NOT NULL DEFAULT '', `chapterKey` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL DEFAULT -1, `chapterTitle` TEXT NOT NULL DEFAULT '', `sourceType` TEXT NOT NULL DEFAULT '', `remoteTaskId` TEXT NOT NULL DEFAULT '', `favorite` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL DEFAULT 0, `updatedAt` INTEGER NOT NULL DEFAULT 0, `lastAccessTime` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
+            db.execSQL("INSERT INTO `ai_generated_audios_new` SELECT * FROM `ai_generated_audios`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_generated_audios`")
+            db.execSQL("ALTER TABLE `ai_generated_audios_new` RENAME TO `ai_generated_audios`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_groupId` ON `ai_generated_audios` (`groupId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_favorite` ON `ai_generated_audios` (`favorite`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_createdAt` ON `ai_generated_audios` (`createdAt`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_bookKey` ON `ai_generated_audios` (`bookKey`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_sourceType` ON `ai_generated_audios` (`sourceType`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_lastAccessTime` ON `ai_generated_audios` (`lastAccessTime`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_audio_book_chapter` ON `ai_generated_audios` (`bookKey`, `chapterIndex`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_audio_lru` ON `ai_generated_audios` (`favorite`, `lastAccessTime`)")
+
+            // ai_audio_groups
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_audio_groups_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `createdAt` INTEGER NOT NULL DEFAULT 0, `sortOrder` INTEGER NOT NULL DEFAULT 0)")
+            db.execSQL("INSERT INTO `ai_audio_groups_new` SELECT * FROM `ai_audio_groups`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_audio_groups`")
+            db.execSQL("ALTER TABLE `ai_audio_groups_new` RENAME TO `ai_audio_groups`")
+
+            // ai_generated_images - add @ColumnInfo(defaultValue) to match migration_97_98
+            db.execSQL("CREATE TABLE IF NOT EXISTS `ai_generated_images_new` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `prompt` TEXT NOT NULL, `providerId` TEXT NOT NULL, `providerName` TEXT NOT NULL, `model` TEXT NOT NULL, `localPath` TEXT NOT NULL, `originalSource` TEXT NOT NULL, `bookKey` TEXT NOT NULL DEFAULT '', `bookName` TEXT NOT NULL DEFAULT '', `bookAuthor` TEXT NOT NULL DEFAULT '', `chapterKey` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL DEFAULT -1, `chapterTitle` TEXT NOT NULL DEFAULT '', `characterId` INTEGER NOT NULL DEFAULT 0, `characterName` TEXT NOT NULL DEFAULT '', `sourceType` TEXT NOT NULL DEFAULT '', `sourceText` TEXT NOT NULL DEFAULT '', `favorite` INTEGER NOT NULL, `groupId` TEXT, `genTaskId` TEXT, `generationMode` TEXT, `inputImageId` TEXT, `negativePrompt` TEXT, `referenceImageId` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            db.execSQL("INSERT INTO `ai_generated_images_new` SELECT * FROM `ai_generated_images`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_generated_images`")
+            db.execSQL("ALTER TABLE `ai_generated_images_new` RENAME TO `ai_generated_images`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_groupId` ON `ai_generated_images` (`groupId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_favorite` ON `ai_generated_images` (`favorite`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_createdAt` ON `ai_generated_images` (`createdAt`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_bookKey` ON `ai_generated_images` (`bookKey`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_chapterKey` ON `ai_generated_images` (`chapterKey`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_characterId` ON `ai_generated_images` (`characterId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_images_sourceType` ON `ai_generated_images` (`sourceType`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_image_book_chapter` ON `ai_generated_images` (`bookKey`, `chapterIndex`)")
         }
     }
 
