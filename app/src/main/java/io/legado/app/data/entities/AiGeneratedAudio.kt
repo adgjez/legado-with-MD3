@@ -12,8 +12,8 @@ import androidx.room.PrimaryKey
         Index("createdAt"),
         Index("bookKey"),
         Index("audioType"),
-        Index(value = ["bookKey", "chapterIndex"], name = "idx_audio_book_chapter"),
-        Index(value = ["favorite", "lastAccessTime"], name = "idx_audio_lru")
+        Index(name = "idx_audio_book_chapter", value = ["bookKey", "chapterIndex"]),
+        Index(name = "idx_audio_lru", value = ["favorite", "lastAccessTime"])
     ]
 )
 data class AiGeneratedAudio(

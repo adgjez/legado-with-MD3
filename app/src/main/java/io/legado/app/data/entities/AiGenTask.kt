@@ -12,8 +12,8 @@ import androidx.room.PrimaryKey
         Index("priority"),
         Index("createdAt"),
         Index("parentTaskId"),
-        Index(value = ["status", "priority", "createdAt"], name = "idx_task_status_priority"),
-        Index(value = ["parentTaskId", "modality"], name = "idx_task_parent")
+        Index(name = "idx_task_status_priority", value = ["status", "priority", "createdAt"]),
+        Index(name = "idx_task_parent", value = ["parentTaskId", "modality"])
     ]
 )
 data class AiGenTask(

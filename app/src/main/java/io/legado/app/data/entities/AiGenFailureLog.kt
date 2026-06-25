@@ -7,9 +7,9 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "ai_gen_failure_logs",
     indices = [
-        Index(value = ["modality"], name = "idx_failure_modality"),
-        Index(value = ["providerId"], name = "idx_failure_provider"),
-        Index(value = ["createdAt"], name = "idx_failure_created")
+        Index(name = "idx_failure_modality", value = ["modality"]),
+        Index(name = "idx_failure_provider", value = ["providerId"]),
+        Index(name = "idx_failure_created", value = ["createdAt"])
     ]
 )
 data class AiGenFailureLog(

@@ -32,6 +32,11 @@ object DatabaseMigrations {
             migration_113_114,
             migration_114_115,
             migration_115_116,
+            migration_116_120,
+            migration_117_120,
+            migration_118_120,
+            migration_119_120,
+            migration_120_121,
         )
     }
 
@@ -303,48 +308,43 @@ object DatabaseMigrations {
     }
 
     /**
-     * v116 → v117: Entity definitions were updated (added @ColumnInfo defaultValue
-     * and explicit @Index names to 10 AI entities, plus @ColumnInfo to AiGeneratedImage).
-     * This changes the Room identity hash. The actual DB schema (columns, types) is
-     * unchanged - only DEFAULT clauses and index names differ, which Room does NOT
-     * validate at runtime (it only checks the identity hash in checkIdentity).
-     *
-     * This migration is intentionally empty. Its mere existence triggers Room's
-     * onUpgrade → updateIdentity, which writes the new hash to room_master_table.
-     * No table recreation is needed because:
-     * 1. Columns and types are identical between v116 and v117
-     * 2. DEFAULT clauses only affect new INSERTs, not existing data
-     * 3. Index name differences are not validated at runtime
+     * v116 → v120: Entities have @Index(name=...) and @ColumnInfo removed
+     * to match the actual table structure created by previous migrations.
+     * No structural changes needed — no-op migration.
      */
-    private val migration_116_117 = object : Migration(116, 117) {
+    private val migration_116_120 = object : Migration(116, 120) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // No-op: only the identity hash needs updating, which Room handles
-            // automatically after migrate() returns.
+            // No-op: columns and indices in entity match actual table schema
+        }
+    }
+
+    private val migration_117_120 = object : Migration(117, 120) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // No-op: same rationale as migration_116_120
+        }
+    }
+
+    private val migration_118_120 = object : Migration(118, 120) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // No-op: same rationale as migration_116_120
+        }
+    }
+
+    private val migration_119_120 = object : Migration(119, 120) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // No-op: same rationale as migration_116_120
         }
     }
 
     /**
-     * v117 → v118: Reverted @ColumnInfo(defaultValue) from AiGeneratedImage.
-     * The table was created by Room onCreate without DEFAULT clauses, but the
-     * entity expected them, causing "Migration didn't properly handle" error.
-     * Removing @ColumnInfo makes the entity match the actual table schema.
+     * v120 → v121: Entity index names restored to match migration DDL.
+     * All @Index(name=...) now match the explicit names in migration_109_110,
+     * migration_110_111, migration_113_114, migration_115_116, and migration_108_109.
+     * No structural changes — no-op migration.
      */
-    private val migration_117_118 = object : Migration(117, 118) {
+    private val migration_120_121 = object : Migration(120, 121) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // No-op: entity now matches existing table schema
-        }
-    }
-
-    /**
-     * v118 → v119: Removed @ColumnInfo(defaultValue) from all 10 AI entities.
-     * Room's post-migration validation checks column DEFAULT clauses. Tables created
-     * by Room onCreate (fresh install at v116) didn't have DEFAULT, but entities
-     * expected them → crash. Removing @ColumnInfo makes Room skip DEFAULT validation.
-     * The Kotlin default values (= "", = 0) still provide application-level defaults.
-     */
-    private val migration_118_119 = object : Migration(118, 119) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            // No-op: entities no longer expect DEFAULT clauses, matching all table states
+            // No-op: columns/types identical, only index names changed in entity
         }
     }
 

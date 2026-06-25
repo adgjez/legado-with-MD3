@@ -15,8 +15,8 @@ import androidx.room.PrimaryKey
         Index("sourceType"),
         Index("generationMode"),
         Index("parentVideoId"),
-        Index(value = ["bookKey", "chapterIndex"], name = "idx_video_book_chapter"),
-        Index(value = ["favorite", "lastAccessTime"], name = "idx_video_lru")
+        Index(name = "idx_video_book_chapter", value = ["bookKey", "chapterIndex"]),
+        Index(name = "idx_video_lru", value = ["favorite", "lastAccessTime"])
     ]
 )
 data class AiGeneratedVideo(

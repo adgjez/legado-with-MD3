@@ -7,8 +7,8 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "ai_gen_vouchers",
     indices = [
-        Index(value = ["taskId"], name = "idx_voucher_task"),
-        Index(value = ["createdAt"], name = "idx_voucher_created")
+        Index(name = "idx_voucher_task", value = ["taskId"]),
+        Index(name = "idx_voucher_created", value = ["createdAt"])
     ]
 )
 data class AiGenVoucher(

@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey
         Index("chapterKey"),
         Index("characterId"),
         Index("sourceType"),
-        Index(value = ["bookKey", "chapterIndex"], name = "idx_image_book_chapter")
+        Index(name = "idx_image_book_chapter", value = ["bookKey", "chapterIndex"])
     ]
 )
 data class AiGeneratedImage(

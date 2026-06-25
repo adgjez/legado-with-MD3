@@ -8,8 +8,8 @@ import androidx.room.PrimaryKey
     tableName = "ai_purified_text_cache",
     indices = [
         Index(
-            value = ["bookKey", "chapterIndex", "intensity"],
             name = "idx_purify_cache",
+            value = ["bookKey", "chapterIndex", "intensity"],
             unique = true
         )
     ]
