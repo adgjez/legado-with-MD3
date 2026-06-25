@@ -11,7 +11,7 @@ data class AiResolvedTool(
 
 object AiToolRegistry {
 
-    private const val TOOL_SETTINGS_VERSION = 13
+    private const val TOOL_SETTINGS_VERSION = 14
     private val version2AddedDefaultTools = setOf(
         "list_speech_catalogs",
         "assign_character_speech_route",
@@ -72,6 +72,11 @@ object AiToolRegistry {
         "generate_book_cover",
         "generate_scene_illustration",
         "generate_character_portrait"
+    )
+
+    // v14: 恢复联网搜索工具
+    private val version14AddedDefaultTools = setOf(
+        "search_web_tavily"
     )
 
     val characterCompanionToolNames = setOf(
@@ -139,6 +144,7 @@ object AiToolRegistry {
         "reading_ajax",
         "reading_webview",
         "capture_web_requests",
+        "search_web_tavily",
         "generate_image",
         "list_book_characters",
         "upsert_book_character",
@@ -402,6 +408,7 @@ object AiToolRegistry {
                 if (AppConfig.aiEnabledToolNamesVersion < 11) addAll(version11AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 12) addAll(version12AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 13) addAll(version13AddedDefaultTools)
+                if (AppConfig.aiEnabledToolNamesVersion < 14) addAll(version14AddedDefaultTools)
             }
             val migrated = (stored.ifEmpty { defaultEnabledTools } + additions)
                 .filter { it.isNotBlank() }
