@@ -119,6 +119,8 @@ data class AiChatScreenActions(
     val onOpenHistory: () -> Unit,
     val onSelectModel: () -> Unit,
     val onOpenImageGallery: (() -> Unit)? = null,
+    val onOpenVideoGallery: (() -> Unit)? = null,
+    val onOpenUnifiedGallery: (() -> Unit)? = null,
     val onOpenWindowAbilities: (() -> Unit)? = null,
     val onOpenWorldBooks: (() -> Unit)? = null,
     val onToggleAutoSpeak: (() -> Unit)? = null,
@@ -694,6 +696,12 @@ private fun AiChatTopBar(
                         add(AiTopMenuAction(stringResource(R.string.ai_setting)) { actions.onOpenSettings() })
                         actions.onOpenImageGallery?.let { openGallery ->
                             add(AiTopMenuAction(stringResource(R.string.ai_image_gallery), openGallery))
+                        }
+                        actions.onOpenVideoGallery?.let { openVideoGallery ->
+                            add(AiTopMenuAction("AI 视频库", openVideoGallery))
+                        }
+                        actions.onOpenUnifiedGallery?.let { openUnifiedGallery ->
+                            add(AiTopMenuAction("AI 统一素材库", openUnifiedGallery))
                         }
                     },
                     onDismiss = { menuExpanded = false }

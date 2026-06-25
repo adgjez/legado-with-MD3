@@ -23,11 +23,14 @@ import io.legado.app.ui.widget.compose.showComposeTextFormDialogWithChecks
 import io.legado.app.ui.main.ai.AiModelConfig
 import io.legado.app.ui.main.ai.AiMcpServerConfig
 import io.legado.app.ui.main.ai.AiImageGalleryActivity
+import io.legado.app.ui.main.ai.AiVideoGalleryActivity
+import io.legado.app.ui.main.ai.AiUnifiedGalleryActivity
 import io.legado.app.ui.main.ai.AiSkillConfig
 import io.legado.app.ui.main.ai.AiVideoProviderConfig
 import io.legado.app.ui.main.ai.AiAudioProviderConfig
 import io.legado.app.ui.main.ai.AiVideoProviderEditActivity
 import io.legado.app.ui.main.ai.AiAudioProviderEditActivity
+import io.legado.app.ui.book.read.config.AiReadAloudUsageRecordActivity
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
@@ -50,6 +53,8 @@ class AiConfigFragment : ComposeSettingFragment() {
         const val KEY_WORLD_BOOK_MANAGE = "aiWorldBookManage"
         const val KEY_DEFAULT_MODEL_SETTINGS = "aiDefaultModelSettings"
         const val KEY_IMAGE_GALLERY = "aiImageGallery"
+        const val KEY_VIDEO_GALLERY = "aiVideoGallery"
+        const val KEY_UNIFIED_GALLERY = "aiUnifiedGallery"
         const val KEY_IMAGE_PROVIDER_MANAGE = "aiImageProviderManage"
         const val KEY_VIDEO_PROVIDER_MANAGE = "aiVideoProviderManage"
         const val KEY_AUDIO_PROVIDER_MANAGE = "aiAudioProviderManage"
@@ -182,6 +187,22 @@ class AiConfigFragment : ComposeSettingFragment() {
                             }
                         ),
                         SettingActionSpec(
+                            key = KEY_VIDEO_GALLERY,
+                            title = "AI 视频库",
+                            summary = "浏览和管理 AI 生成的视频",
+                            onClick = {
+                                startActivity(Intent(requireContext(), AiVideoGalleryActivity::class.java))
+                            }
+                        ),
+                        SettingActionSpec(
+                            key = KEY_UNIFIED_GALLERY,
+                            title = "AI 统一素材库",
+                            summary = "图片、视频、音频素材统一管理",
+                            onClick = {
+                                startActivity(Intent(requireContext(), AiUnifiedGalleryActivity::class.java))
+                            }
+                        ),
+                        SettingActionSpec(
                             key = KEY_IMAGE_PROVIDER_MANAGE,
                             title = getString(R.string.ai_image_provider_manage),
                             summary = if (imageProviders.isEmpty()) {
@@ -208,6 +229,14 @@ class AiConfigFragment : ComposeSettingFragment() {
                             title = "AI 音频供应商",
                             summary = audioProviderSummary(),
                             onClick = ::showAudioProviderManageDialog
+                        ),
+                        SettingActionSpec(
+                            key = "aiReadAloudUsage",
+                            title = "AI 朗读消耗记录",
+                            summary = "查看 AI 朗读 API 消耗统计",
+                            onClick = {
+                                startActivity(Intent(requireContext(), AiReadAloudUsageRecordActivity::class.java))
+                            }
                         )
                     )
                 ),

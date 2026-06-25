@@ -114,6 +114,8 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     onOpenHistory = ::openHistoryFromMenu,
                     onSelectModel = ::showModelSelectorDialog,
                     onOpenImageGallery = ::openImageGallery,
+                    onOpenVideoGallery = ::openVideoGallery,
+                    onOpenUnifiedGallery = ::openUnifiedGallery,
                     onOpenWindowAbilities = ::showWindowAbilityDialog,
                     onOpenWorldBooks = { showCompanionWorldBookDialog() },
                     onToggleAutoSpeak = ::toggleAutoSpeak,
@@ -200,6 +202,14 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
 
     private fun openImageGallery() {
         startActivity(android.content.Intent(this, AiImageGalleryActivity::class.java))
+    }
+
+    private fun openVideoGallery() {
+        startActivity(android.content.Intent(this, AiVideoGalleryActivity::class.java))
+    }
+
+    private fun openUnifiedGallery() {
+        startActivity(android.content.Intent(this, AiUnifiedGalleryActivity::class.java))
     }
 
     private fun selectCompanion(companionId: String) {
