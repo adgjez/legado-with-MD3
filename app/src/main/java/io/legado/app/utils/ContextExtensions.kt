@@ -362,10 +362,10 @@ fun Context.shareWithQr(
     } else {
         try {
             val file = File(externalCacheDir, "qr.png")
-            val fOut = FileOutputStream(file)
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut)
-            fOut.flush()
-            fOut.close()
+            FileOutputStream(file).use { fOut ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut)
+                fOut.flush()
+            }
             file.setReadable(true, false)
             val contentUri = FileProvider.getUriForFile(this, AppConst.authority, file)
             val intent = Intent(Intent.ACTION_SEND)

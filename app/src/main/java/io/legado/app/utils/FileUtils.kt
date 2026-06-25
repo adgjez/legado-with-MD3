@@ -363,10 +363,8 @@ object FileUtils {
     fun copy(src: File, tar: File): Boolean {
         try {
             if (src.isFile) {
-                val inputStream = FileInputStream(src)
-                val outputStream = FileOutputStream(tar)
-                inputStream.use {
-                    outputStream.use {
+                FileInputStream(src).use { inputStream ->
+                    FileOutputStream(tar).use { outputStream ->
                         inputStream.copyTo(outputStream)
                         outputStream.flush()
                     }
@@ -433,9 +431,9 @@ object FileUtils {
      */
     fun readBytes(filepath: String): ByteArray? {
         var fis: FileInputStream? = null
+        val outputStream = ByteArrayOutputStream()
         try {
             fis = FileInputStream(filepath)
-            val outputStream = ByteArrayOutputStream()
             val buffer = ByteArray(1024)
             while (true) {
                 val len = fis.read(buffer, 0, buffer.size)
@@ -445,13 +443,12 @@ object FileUtils {
                     outputStream.write(buffer, 0, len)
                 }
             }
-            val data = outputStream.toByteArray()
-            outputStream.close()
-            return data
+            return outputStream.toByteArray()
         } catch (e: IOException) {
             return null
         } finally {
             closeSilently(fis)
+            closeSilently(outputStream)
         }
     }
 

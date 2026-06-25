@@ -143,7 +143,7 @@ object RealPathUtil {
                     File(filePath).absolutePath
                 }
             } catch (e: IOException) {
-                e.printStackTrace()
+                e.printOnDebug()
             }
         } finally {
             cursor?.close()

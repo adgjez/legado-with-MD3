@@ -49,12 +49,7 @@ object ConvertUtils {
     }
 
     fun toString(objects: Array<Any>, tag: String): String {
-        val sb = StringBuilder()
-        for (`object` in objects) {
-            sb.append(`object`)
-            sb.append(tag)
-        }
-        return sb.toString()
+        return objects.joinToString(tag)
     }
 
     @JvmOverloads

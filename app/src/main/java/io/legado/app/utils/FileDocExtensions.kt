@@ -29,7 +29,7 @@ data class FileDoc(
 ) {
 
     override fun toString(): String {
-        return if (uri.isContentScheme()) uri.toString() else uri.path!!
+        return if (uri.isContentScheme()) uri.toString() else uri.path ?: uri.toString()
     }
 
     val isContentScheme get() = uri.isContentScheme()
@@ -268,8 +268,10 @@ fun FileDoc.createFileIfNotExist(
     vararg subDirs: String
 ): FileDoc {
     return if (uri.isContentScheme()) {
-        val documentFile = asDocumentFile()!!
-        val tmp = DocumentUtils.createFileIfNotExist(documentFile, fileName, *subDirs)!!
+        val documentFile = asDocumentFile()
+            ?: throw NoStackTraceException("无法获取DocumentFile")
+        val tmp = DocumentUtils.createFileIfNotExist(documentFile, fileName, *subDirs)
+            ?: throw NoStackTraceException("无法创建文件$fileName")
         FileDoc.fromDocumentFile(tmp)
     } else {
         val path = FileUtils.getPath(uri.path!!, *subDirs) + File.separator + fileName
@@ -282,8 +284,10 @@ fun FileDoc.createFolderIfNotExist(
     vararg subDirs: String
 ): FileDoc {
     return if (uri.isContentScheme()) {
-        val documentFile = asDocumentFile()!!
-        val tmp = DocumentUtils.createFolderIfNotExist(documentFile, *subDirs)!!
+        val documentFile = asDocumentFile()
+            ?: throw NoStackTraceException("无法获取DocumentFile")
+        val tmp = DocumentUtils.createFolderIfNotExist(documentFile, *subDirs)
+            ?: throw NoStackTraceException("无法创建文件夹")
         FileDoc.fromDocumentFile(tmp)
     } else {
         val path = FileUtils.getPath(uri.path!!, *subDirs)
@@ -313,7 +317,8 @@ fun FileDoc.exists(
     vararg subDirs: String
 ): Boolean {
     return if (uri.isContentScheme()) {
-        DocumentUtils.exists(asDocumentFile()!!, fileName, *subDirs)
+        DocumentUtils.exists(asDocumentFile()
+            ?: throw NoStackTraceException("无法获取DocumentFile"), fileName, *subDirs)
     } else {
         val path = FileUtils.getPath(uri.path!!, *subDirs) + File.separator + fileName
         FileUtils.exist(path)
@@ -322,7 +327,7 @@ fun FileDoc.exists(
 
 fun FileDoc.exists(): Boolean {
     return if (uri.isContentScheme()) {
-        asDocumentFile()!!.exists()
+        (asDocumentFile() ?: throw NoStackTraceException("无法获取DocumentFile")).exists()
     } else {
         FileUtils.exist(uri.path!!)
     }
@@ -358,7 +363,7 @@ fun FileDoc.checkWrite(): Boolean {
     asFile()?.let {
         return it.checkWrite()
     }
-    return asDocumentFile()!!.checkWrite()
+    return (asDocumentFile() ?: throw NoStackTraceException("无法获取DocumentFile")).checkWrite()
 }
 
 /**

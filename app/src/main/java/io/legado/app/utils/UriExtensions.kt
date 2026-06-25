@@ -43,7 +43,8 @@ fun AppCompatActivity.readUri(
             val doc = DocumentFile.fromSingleUri(this, uri)
             doc ?: throw NoStackTraceException("未获取到文件")
             val fileDoc = FileDoc.fromDocumentFile(doc)
-            contentResolver.openInputStream(uri)!!.use { inputStream ->
+            (contentResolver.openInputStream(uri)
+                ?: throw NoStackTraceException("无法打开文件流\n$uri")).use { inputStream ->
                 success.invoke(fileDoc, inputStream)
             }
         } else {
@@ -80,7 +81,8 @@ fun Fragment.readUri(uri: Uri?, success: (fileDoc: FileDoc, inputStream: InputSt
             val doc = DocumentFile.fromSingleUri(requireContext(), uri)
             doc ?: throw NoStackTraceException("未获取到文件")
             val fileDoc = FileDoc.fromDocumentFile(doc)
-            requireContext().contentResolver.openInputStream(uri)!!.use { inputStream ->
+            (requireContext().contentResolver.openInputStream(uri)
+                ?: throw NoStackTraceException("无法打开文件流\n$uri")).use { inputStream ->
                 success.invoke(fileDoc, inputStream)
             }
         } else {
