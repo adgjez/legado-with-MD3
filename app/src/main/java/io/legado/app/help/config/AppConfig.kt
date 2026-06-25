@@ -897,9 +897,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) = appCtx.putPrefInt(PreferKey.aiSanitizeIntensity, value.coerceIn(1, 10))
 
     var aiVideoProviderList: List<AiVideoProviderConfig>
-        get() = GSON.fromJsonArray<AiVideoProviderConfig>(
-            appCtx.getPrefString(PreferKey.aiVideoProviderList)
-        ).getOrDefault(emptyList())
+        get() {
+            ensureBuiltinAiProviders()
+            return GSON.fromJsonArray<AiVideoProviderConfig>(
+                appCtx.getPrefString(PreferKey.aiVideoProviderList)
+            ).getOrDefault(emptyList())
+        }
         set(value) {
             if (value.isEmpty()) appCtx.removePref(PreferKey.aiVideoProviderList)
             else appCtx.putPrefString(PreferKey.aiVideoProviderList, GSON.toJson(value))
@@ -1039,10 +1042,13 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         get() = aiPersonaList.firstOrNull { it.id == aiCurrentPersonaId }
 
     var aiImageProviderList: List<AiImageProviderConfig>
-        get() = normalizeAiImageProviders(
-            GSON.fromJsonArray<AiImageProviderConfig>(appCtx.getPrefString(PreferKey.aiImageProviderList))
-                .getOrDefault(emptyList())
-        )
+        get() {
+            ensureBuiltinAiProviders()
+            return normalizeAiImageProviders(
+                GSON.fromJsonArray<AiImageProviderConfig>(appCtx.getPrefString(PreferKey.aiImageProviderList))
+                    .getOrDefault(emptyList())
+            )
+        }
         set(value) {
             val providers = normalizeAiImageProviders(value)
             if (providers.isEmpty()) appCtx.removePref(PreferKey.aiImageProviderList)
@@ -1408,6 +1414,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     private fun readAiProviders(): List<AiProviderConfig> {
         migrateLegacyAiConfigIfNeeded()
+        ensureBuiltinAiProviders()
         return normalizeAiProviders(
             GSON.fromJsonArray<AiProviderConfig>(appCtx.getPrefString(PreferKey.aiProviderList))
                 .getOrDefault(emptyList())
@@ -2046,6 +2053,54 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.aiAssistantEnabled, false)
         } else {
             appCtx.putPrefString(PreferKey.aiCurrentModelId, currentModel.id)
+        }
+    }
+
+    fun ensureBuiltinAiProviders() {
+        if (appCtx.getPrefBoolean(PreferKey.aiBuiltinProvidersInitialized, false)) return
+        appCtx.putPrefBoolean(PreferKey.aiBuiltinProvidersInitialized, true)
+
+        val agnesBaseUrl = "https://apihub.agnes-ai.com/v1"
+
+        // --- 文本供应商 ---
+        val chatProviderId = "builtin_agnes_chat"
+        val existing = aiProviderList
+        if (existing.none { it.id == chatProviderId || it.baseUrl == agnesBaseUrl }) {
+            val provider = AiProviderConfig(
+                id = chatProviderId,
+                name = "Agnes AI",
+                baseUrl = agnesBaseUrl
+            )
+            aiProviderList = existing + provider
+            aiModelConfigList = aiModelConfigList + AiModelConfig(
+                providerId = chatProviderId,
+                modelId = "agnes-2.0-flash"
+            )
+        }
+
+        // --- 图片供应商 ---
+        val imageProviderId = "builtin_agnes_image"
+        val imageProviders = aiImageProviderList
+        if (imageProviders.none { it.id == imageProviderId || it.baseUrl == agnesBaseUrl }) {
+            aiImageProviderList = imageProviders + AiImageProviderConfig(
+                id = imageProviderId,
+                name = "Agnes AI 图片",
+                baseUrl = agnesBaseUrl,
+                model = "agnes-image-2.0-flash",
+                defaultParamsJson = "{\n  \"size\": \"1024x1024\"\n}"
+            )
+        }
+
+        // --- 视频供应商 ---
+        val videoProviderId = "builtin_agnes_video"
+        val videoProviders = aiVideoProviderList
+        if (videoProviders.none { it.id == videoProviderId || it.baseUrl == agnesBaseUrl }) {
+            aiVideoProviderList = videoProviders + AiVideoProviderConfig(
+                id = videoProviderId,
+                name = "Agnes AI 视频",
+                baseUrl = agnesBaseUrl,
+                model = "agnes-video-2.0"
+            )
         }
     }
 

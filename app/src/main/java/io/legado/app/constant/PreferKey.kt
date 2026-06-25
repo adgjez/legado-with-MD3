@@ -55,6 +55,7 @@ object PreferKey {
     const val modernRssSourceUrl = "modernRssSourceUrl"
     const val paragraphBubblePackage = "paragraphBubblePackage"
     const val aiAssistantEnabled = "aiAssistantEnabled"
+    const val aiBuiltinProvidersInitialized = "aiBuiltinProvidersInitialized"
     const val aiProviderList = "aiProviderList"
     const val aiCurrentProviderId = "aiCurrentProviderId"
     const val aiModelConfigList = "aiModelConfigList"
