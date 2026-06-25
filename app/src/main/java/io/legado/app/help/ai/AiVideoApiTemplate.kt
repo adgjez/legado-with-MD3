@@ -1,12 +1,13 @@
 package io.legado.app.help.ai
 
 import io.legado.app.ui.main.ai.AiVideoProviderConfig
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * 视频 API 模板 — 定义特定供应商的 API 请求/响应格式差异。
  *
- * 不同视频 API 在 submit payload、status response、download url 等环节
+ * 不同视频 API 在 submit URL、payload 格式、status URL、响应解析等环节
  * 存在格式差异。模板封装这些差异，使 [AiVideoService] 无需为每个供应商
  * 编写特化代码。
  */
@@ -21,15 +22,30 @@ interface AiVideoApiTemplate {
     /** 简短描述 */
     val description: String
 
+    /** 构建 submit 请求 URL */
+    fun buildSubmitUrl(baseUrl: String, provider: AiVideoProviderConfig): String {
+        val clean = baseUrl.trimEnd('/')
+        val endpoint = provider.submitEndpoint.trim()
+        return if (endpoint.isBlank()) "$clean/videos/generations"
+        else "$clean/${endpoint.trimStart('/')}"
+    }
+
+    /** 构建 status 查询 URL */
+    fun buildStatusUrl(baseUrl: String, remoteTaskId: String, provider: AiVideoProviderConfig): String {
+        val clean = baseUrl.trimEnd('/')
+        val raw = provider.statusEndpoint.trim()
+        val path = if (raw.isBlank()) "videos/generations/${remoteTaskId.trim()}"
+        else raw.replace("{id}", remoteTaskId.trim()).replace("{taskId}", remoteTaskId.trim())
+        return "$clean/${path.trimStart('/')}"
+    }
+
+    /** 构建 cancel URL */
+    fun buildCancelUrl(baseUrl: String, remoteTaskId: String, provider: AiVideoProviderConfig): String {
+        return "${buildStatusUrl(baseUrl, remoteTaskId, provider)}/cancel"
+    }
+
     /**
      * 构建 submit 请求体。
-     * @param prompt        用户提示词
-     * @param model         模型名
-     * @param inputImage    首帧图片 base64 data URL，可能为 null
-     * @param tailImage     尾帧图片 base64 data URL，可能为 null
-     * @param referenceImage 参考图 base64 data URL，可能为 null
-     * @param extraParams   额外 JSON 参数
-     * @param provider      当前供应商配置
      */
     fun buildSubmitPayload(
         prompt: String,
@@ -41,27 +57,19 @@ interface AiVideoApiTemplate {
         provider: AiVideoProviderConfig
     ): JSONObject
 
-    /**
-     * 解析 submit 响应，返回任务 ID。
-     * 默认从 id / task_id / taskId 字段提取。
-     */
+    /** 解析 submit 响应，返回任务 ID */
     fun parseSubmitResult(json: JSONObject): String {
         return json.optString("id")
             .ifBlank { json.optString("task_id") }
             .ifBlank { json.optString("taskId") }
     }
 
-    /**
-     * 解析 status 响应，返回任务状态。
-     * 默认从 status 字段读取。
-     */
+    /** 解析 status 响应，返回任务状态 */
     fun parseStatus(json: JSONObject): String {
         return json.optString("status", "processing")
     }
 
-    /**
-     * 解析 status 响应，返回进度百分比 (0-100)，-1 表示未知。
-     */
+    /** 解析 status 响应，返回进度百分比 (0-100)，-1 表示未知 */
     fun parseProgress(json: JSONObject): Int {
         val direct = json.opt("progress")
         val parsed = when (direct) {
@@ -76,24 +84,18 @@ interface AiVideoApiTemplate {
         return -1
     }
 
-    /**
-     * 解析 status 响应，提取视频下载 URL。
-     */
+    /** 解析 status 响应，提取视频下载 URL */
     fun parseDownloadUrl(json: JSONObject): String?
 
-    /**
-     * 解析 status 响应，提取预览图 URL。
-     */
+    /** 解析 status 响应，提取预览图 URL */
     fun parsePreviewUrl(json: JSONObject): String?
 
     companion object {
-        /** 所有已注册模板 */
         val ALL: List<AiVideoApiTemplate> = listOf(
             DefaultVideoTemplate,
             AgnesVideoTemplate
         )
 
-        /** 根据 key 查找模板 */
         fun find(key: String): AiVideoApiTemplate? =
             ALL.firstOrNull { it.key == key }
     }
@@ -107,13 +109,9 @@ object DefaultVideoTemplate : AiVideoApiTemplate {
     override val description = "标准 OpenAI 兼容视频 API"
 
     override fun buildSubmitPayload(
-        prompt: String,
-        model: String,
-        inputImage: String?,
-        tailImage: String?,
-        referenceImage: String?,
-        extraParams: JSONObject,
-        provider: AiVideoProviderConfig
+        prompt: String, model: String,
+        inputImage: String?, tailImage: String?, referenceImage: String?,
+        extraParams: JSONObject, provider: AiVideoProviderConfig
     ): JSONObject = JSONObject().apply {
         put("model", model)
         put("prompt", prompt)
@@ -126,62 +124,146 @@ object DefaultVideoTemplate : AiVideoApiTemplate {
     }
 
     override fun parseDownloadUrl(json: JSONObject): String? = videoFromOpenAiJson(json)
-
     override fun parsePreviewUrl(json: JSONObject): String? = findPreviewUrl(json)
 }
 
 // ── Agnes AI Video 模板 ──
 
+/**
+ * Agnes AI Video API 完整适配。
+ *
+ * Submit:  POST /v1/videos
+ * Status:  GET /agnesapi?video_id=<VIDEO_ID>&model_name=<MODEL>
+ * Legacy:  GET /v1/videos/<TASK_ID>
+ *
+ * Payload: model, prompt, height, width, num_frames, frame_rate,
+ *          image (URL), extra_body.image[], extra_body.mode
+ *
+ * num_frames: 8n+1, ≤441. seconds = num_frames / frame_rate.
+ *
+ * Response: { video_id, status, remixed_from_video_id (download URL) }
+ */
 object AgnesVideoTemplate : AiVideoApiTemplate {
     override val key = "agnes_video_2.0"
     override val displayName = "Agnes AI Video 2.0"
     override val description = "Agnes AI 视频模型，支持 1080P 音画同出"
 
-    /**
-     * 服务器 submit 返回: { id, task_id, video_id, status, progress, ... }
-     * 优先用 video_id（status 查询用 video_id），回退 task_id/id
-     */
+    // ── URL 构建 ──
+
+    override fun buildSubmitUrl(baseUrl: String, provider: AiVideoProviderConfig): String {
+        val clean = baseUrl.trimEnd('/')
+        val endpoint = provider.submitEndpoint.trim()
+        // 默认端点或空白 → 使用 Agnes 专用路径 /videos
+        return if (endpoint.isBlank() || endpoint == "/videos/generations") "$clean/videos"
+        else "$clean/${endpoint.trimStart('/')}"
+    }
+
+    override fun buildStatusUrl(baseUrl: String, remoteTaskId: String, provider: AiVideoProviderConfig): String {
+        val clean = baseUrl.trimEnd('/')
+        val raw = provider.statusEndpoint.trim()
+        return when {
+            // 用户自定义了非默认端点，照用
+            raw.isNotBlank() && raw != "/videos/generations/{id}" -> {
+                val path = raw.replace("{id}", remoteTaskId).replace("{taskId}", remoteTaskId)
+                "$clean/${path.trimStart('/')}"
+            }
+            // 使用 Agnes 专用接口
+            else -> {
+                val model = provider.model.trim().ifBlank { "agnes-video-v2.0" }
+                "$clean/agnesapi?video_id=${remoteTaskId.trim()}&model_name=$model"
+            }
+        }
+    }
+
+    override fun buildCancelUrl(baseUrl: String, remoteTaskId: String, provider: AiVideoProviderConfig): String {
+        return buildStatusUrl(baseUrl, remoteTaskId, provider) // no cancel endpoint, just poll
+    }
+
+    // ── Submit Payload ──
+
+    override fun buildSubmitPayload(
+        prompt: String, model: String,
+        inputImage: String?, tailImage: String?, referenceImage: String?,
+        extraParams: JSONObject, provider: AiVideoProviderConfig
+    ): JSONObject = JSONObject().apply {
+        put("model", model)
+        put("prompt", prompt)
+
+        // 解析尺寸参数
+        val size = parseSize(extraParams)
+        put("width", size.first)
+        put("height", size.second)
+
+        // 帧数: 遵循 8n+1 规则，默认 121 (5秒 @24fps)
+        val numFrames = extraParams.optInt("num_frames", 121)
+            .coerceAtMost(441)
+        put("num_frames", numFrames)
+
+        // 帧率: 默认 24
+        val frameRate = extraParams.optInt("frame_rate", 24)
+        put("frame_rate", frameRate)
+
+        // 图生视频: image 字段传图片 URL
+        inputImage?.takeIf { it.isNotBlank() }?.let { img ->
+            put("image", if (img.startsWith("http")) img else img)
+        }
+
+        // 尾帧/参考图: 通过 extra_body 传递
+        val extraBody = extraParams.optJSONObject("extra_body")?.let { JSONObject(it.toString()) }
+            ?: JSONObject()
+        tailImage?.takeIf { it.isNotBlank() }?.let {
+            extraBody.put("tail_image", it)
+        }
+        referenceImage?.takeIf { it.isNotBlank() }?.let {
+            extraBody.put("reference_image", it)
+        }
+
+        // 关键帧模式
+        if (tailImage != null && tailImage.isNotBlank()) {
+            extraBody.put("mode", "keyframes")
+        }
+
+        if (extraBody.length() > 0) {
+            put("extra_body", extraBody)
+        }
+
+        // 合并其余自定义参数
+        mergeJson(extraParams, setOf(
+            "model", "prompt", "width", "height", "num_frames", "frame_rate",
+            "image", "extra_body", "size", "negative_prompt", "input_image", "tail_image", "reference_image"
+        ))
+    }
+
+    /** 解析尺寸: 从 extraParams.size 或 width/height 字段 */
+    private fun parseSize(params: JSONObject): Pair<Int, Int> {
+        // 尝试 "size" 字段 (如 "1280x768")
+        params.optString("size").takeIf { it.isNotBlank() }?.let { raw ->
+            val parts = raw.split("x", "X", "*", "×").mapNotNull { it.trim().toIntOrNull() }
+            if (parts.size >= 2) return parts[0] to parts[1]
+        }
+        val w = params.optInt("width", 1152)
+        val h = params.optInt("height", 768)
+        return w to h
+    }
+
+    // ── 响应解析 ──
+
     override fun parseSubmitResult(json: JSONObject): String {
         return json.optString("video_id")
             .ifBlank { json.optString("task_id") }
             .ifBlank { json.optString("id") }
     }
 
-    override fun buildSubmitPayload(
-        prompt: String,
-        model: String,
-        inputImage: String?,
-        tailImage: String?,
-        referenceImage: String?,
-        extraParams: JSONObject,
-        provider: AiVideoProviderConfig
-    ): JSONObject = JSONObject().apply {
-        put("model", model)
-        put("prompt", prompt)
-        val negative = provider.negativePrompt.ifBlank { extraParams.optString("negative_prompt") }
-        negative.takeIf { it.isNotBlank() }?.let { put("negative_prompt", it) }
-        // Agnes AI 使用 image_url 字段而非 input_image
-        if (inputImage != null) {
-            put("image_url", inputImage)
-        }
-        tailImage?.let { put("tail_image", it) }
-        referenceImage?.let { put("reference_image", it) }
-        // 合并额外参数
-        mergeJson(
-            extraParams,
-            setOf("model", "prompt", "negative_prompt", "image_url", "input_image", "tail_image", "reference_image")
-        )
-    }
-
     override fun parseDownloadUrl(json: JSONObject): String? {
-        // Agnes AI 响应格式:
-        //   { output: { video_url: "..." } }
-        //   { video_url: "..." }  (顶层)
-        //   { video_id: "..." }   (需拼接 CDN URL)
+        // Agnes AI: 视频 URL 在 remixed_from_video_id 字段
+        json.optString("remixed_from_video_id").takeIf {
+            it.isNotBlank() && it.startsWith("http")
+        }?.let { return it }
+        // 也检查 output.video_url
         json.optJSONObject("output")?.let { output ->
-            output.optString("video_url").takeIf { it.isNotBlank() }?.let { return it }
+            output.optString("video_url").takeIf { it.isNotBlank() && it.startsWith("http") }?.let { return it }
         }
-        json.optString("video_url").takeIf { it.isNotBlank() && it.startsWith("http") }?.let { return it }
+        // 回退到通用解析
         return videoFromOpenAiJson(json)
     }
 
@@ -197,7 +279,7 @@ object AgnesVideoTemplate : AiVideoApiTemplate {
 
 private val VIDEO_URL_KEYS = listOf(
     "url", "video_url", "download_url", "output_url", "result", "video",
-    "mp4", "webm", "mov", "gif"
+    "mp4", "webm", "mov", "gif", "remixed_from_video_id"
 )
 
 private val VIDEO_CONTAINER_KEYS = listOf("output", "videos", "data", "results", "items", "content")

@@ -551,10 +551,10 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
                     name = "Agnes AI Video 2.0",
                     model = "agnes-video-v2.0",
                     template = "agnes_video_2.0",
-                    submitEndpoint = "/videos/generations",
+                    submitEndpoint = "/videos",
                     statusEndpoint = "/videos/generations/{id}",
                     baseUrl = "https://apihub.agnes-ai.com/v1",
-                    description = "免费视频模型，支持 1080P 音画同出"
+                    description = "免费视频模型，1080P 音画同出"
                 ),
                 VideoModelPreset(
                     name = "自定义模型",

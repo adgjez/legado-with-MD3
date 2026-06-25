@@ -870,42 +870,28 @@ object AiVideoService {
         return when {
             normalized.isBlank() -> ""
             normalized.endsWith("/v1") -> normalized
+            normalized.endsWith("/videos") -> normalized.removeSuffix("/videos")
             normalized.endsWith("/videos/generations") -> normalized.removeSuffix("/videos/generations")
             normalized.endsWith("/responses") -> normalized.removeSuffix("/responses")
             else -> "$normalized/v1"
         }
     }
 
-    private fun buildSubmitUrl(provider: AiVideoProviderConfig, baseUrl: String): String {
-        val endpoint = provider.submitEndpoint.trim()
-        return if (endpoint.isBlank()) {
-            "${baseUrl.trimEnd('/')}/videos/generations"
-        } else {
-            resolveEndpoint(endpoint, baseUrl)
-        }
-    }
+    /** 委托给模板的 URL 构建，避免重复逻辑 */
+    private fun buildSubmitUrl(provider: AiVideoProviderConfig, baseUrl: String): String =
+        resolveTemplate(provider).buildSubmitUrl(baseUrl, provider)
 
     private fun buildStatusUrl(
         provider: AiVideoProviderConfig,
         baseUrl: String,
         remoteTaskId: String
-    ): String {
-        val raw = provider.statusEndpoint.trim()
-        val endpoint = if (raw.isBlank()) {
-            "videos/generations/${remoteTaskId.trim()}"
-        } else {
-            raw.replace("{id}", remoteTaskId.trim()).replace("{taskId}", remoteTaskId.trim())
-        }
-        return resolveEndpoint(endpoint, baseUrl)
-    }
+    ): String = resolveTemplate(provider).buildStatusUrl(baseUrl, remoteTaskId, provider)
 
     private fun buildCancelUrl(
         provider: AiVideoProviderConfig,
         baseUrl: String,
         remoteTaskId: String
-    ): String {
-        return "${buildStatusUrl(provider, baseUrl, remoteTaskId)}/cancel"
-    }
+    ): String = resolveTemplate(provider).buildCancelUrl(baseUrl, remoteTaskId, provider)
 
     private fun resolveEndpoint(endpoint: String, baseUrl: String): String {
         val trimmed = endpoint.trim()
