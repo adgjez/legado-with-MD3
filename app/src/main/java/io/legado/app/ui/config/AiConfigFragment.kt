@@ -220,7 +220,7 @@ class AiConfigFragment : ComposeSettingFragment() {
                         ),
                         SettingActionSpec(
                             key = KEY_VIDEO_PROVIDER_MANAGE,
-                            title = "AI 视频供应商",
+                            title = "AI 视频模型",
                             summary = videoProviderSummary(),
                             onClick = ::showVideoProviderManageDialog
                         ),
@@ -970,7 +970,8 @@ class AiConfigFragment : ComposeSettingFragment() {
         if (providers.isEmpty()) return "未配置"
         val enabled = providers.count { it.enabled }
         val current = AppConfig.aiCurrentVideoProvider
-        return "${current?.name ?: "未选择"} · ${enabled}/${providers.size} 启用"
+        val model = current?.model?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""
+        return "${current?.name ?: "未选择"}$model · ${enabled}/${providers.size} 启用"
     }
 
     private fun audioProviderSummary(): String {
@@ -983,15 +984,16 @@ class AiConfigFragment : ComposeSettingFragment() {
 
     private fun showVideoProviderManageDialog() {
         val providers = AppConfig.aiVideoProviderList
-        val labels = mutableListOf("+ 添加视频供应商")
+        val labels = mutableListOf("+ 添加视频模型")
         labels += providers.map { p ->
             buildString {
                 append(p.name)
+                if (p.model.isNotBlank()) append(" · ${p.model}")
                 if (!p.enabled) append(" (已禁用)")
                 if (p.id == AppConfig.aiCurrentVideoProviderId) append(" ✓")
             }
         }
-        showComposeActionListDialog(title = "AI 视频供应商", labels = labels) { index ->
+        showComposeActionListDialog(title = "AI 视频模型", labels = labels) { index ->
             if (index == 0) {
                 AiVideoProviderEditActivity.start(requireContext())
             } else {
@@ -1068,7 +1070,7 @@ class AiConfigFragment : ComposeSettingFragment() {
     private fun confirmDeleteVideoProvider(provider: AiVideoProviderConfig) {
         showComposeConfirmDialog(
             title = provider.name,
-            message = "确定删除该视频供应商？",
+            message = "确定删除该视频模型？",
             dangerPositive = true,
             onPositive = {
                 AppConfig.aiVideoProviderList = AppConfig.aiVideoProviderList.filterNot { it.id == provider.id }
