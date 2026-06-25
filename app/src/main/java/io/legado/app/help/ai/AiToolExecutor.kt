@@ -23,7 +23,10 @@ internal object AiToolExecutor {
         "generate_book_character_avatar",
         "generate_images",
         "edit_image",
-        "inpaint_image"
+        "inpaint_image",
+        "generate_book_cover",
+        "generate_scene_illustration",
+        "generate_character_portrait"
     )
 
     private val videoToolNames = setOf(
@@ -35,11 +38,6 @@ internal object AiToolExecutor {
 
     private val sanitizeToolNames = setOf(
         "sanitize_text"
-    )
-
-    private val audioToolNames = setOf(
-        "generate_music",
-        "generate_sound_effect"
     )
 
     private val storyToolNames = setOf(
@@ -74,9 +72,10 @@ internal object AiToolExecutor {
         "extract_video_frame",
         "continue_video_from_frame",
         "sanitize_text",
-        "generate_music",
-        "generate_sound_effect",
-        "generate_scene"
+        "generate_scene",
+        "generate_book_cover",
+        "generate_scene_illustration",
+        "generate_character_portrait"
     )
 
     suspend fun execute(
@@ -146,7 +145,6 @@ internal object AiToolExecutor {
         return when {
             name in videoToolNames -> VIDEO_TOOL_TIMEOUT_MILLIS
             name in imageToolNames -> IMAGE_TOOL_TIMEOUT_MILLIS
-            name in audioToolNames -> AUDIO_TOOL_TIMEOUT_MILLIS
             name in sanitizeToolNames -> SANITIZE_TOOL_TIMEOUT_MILLIS
             name in storyToolNames -> 1_800_000L // 30 min for story pipeline
             else -> DEFAULT_TOOL_TIMEOUT_MILLIS
@@ -160,11 +158,6 @@ internal object AiToolExecutor {
         "generate_video_keyframes",
         "generate_video_multi_image",
         "continue_video_from_frame"
-    )
-
-    private val asyncAudioToolNames = setOf(
-        "generate_music",
-        "generate_sound_effect"
     )
 
     private const val STORY_PIPELINE_TIMEOUT_MILLIS = 1_800_000L // 30 min
@@ -224,7 +217,6 @@ internal object AiToolExecutor {
         }
         return when {
             name in asyncVideoToolNames -> submitVideoTaskAsync(args, prompt)
-            name in asyncAudioToolNames -> submitAudioTaskAsync(name, args, prompt)
             else -> JSONObject()
                 .put("ok", false)
                 .put("error", "Tool $name does not support async submission")
@@ -273,47 +265,6 @@ internal object AiToolExecutor {
                 put("status", task?.status ?: "submitted")
                 put("remoteTaskId", submitResult.remoteTaskId)
                 put("modality", "video")
-            }.toString()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AiGenTaskManager.failTask(taskId, e.localizedMessage ?: e.javaClass.simpleName)
-            JSONObject().apply {
-                put("ok", false)
-                put("error", e.localizedMessage ?: e.javaClass.simpleName)
-                put("taskId", taskId)
-            }.toString()
-        }
-    }
-
-    private suspend fun submitAudioTaskAsync(name: String, args: JSONObject, prompt: String): String {
-        val providerId = args.optString("providerId").trim()
-        val provider = if (providerId.isBlank()) null else AiAudioService.providerByIdOrNull(providerId)
-        val targetProvider = provider ?: AiAudioService.currentProviderOrNull()
-            ?: return JSONObject().put("ok", false).put("error", "No available audio provider").toString()
-        val audioType = if (name == "generate_sound_effect") "sfx" else "music"
-
-        val taskId = AiGenTaskManager.createTask(
-            modality = "audio",
-            prompt = prompt,
-            providerId = targetProvider.id,
-            providerName = targetProvider.displayName(),
-            model = targetProvider.model,
-            sourceType = audioType
-        )
-        // Generate emotional progress hint
-        val hint = AiPromptRewriter.generateProgressHint("audio", "")
-        AiGenTaskManager.updateEmotionalHint(taskId, hint)
-        return try {
-            val submitResult = AiAudioService.submit(prompt, JSONObject(), targetProvider)
-            AiGenTaskManager.submitTask(taskId, submitResult.remoteTaskId)
-            val task: AiGenTask? = appDb.aiGenTaskDao.get(taskId)
-            JSONObject().apply {
-                put("ok", true)
-                put("taskId", taskId)
-                put("status", task?.status ?: "submitted")
-                put("remoteTaskId", submitResult.remoteTaskId)
-                put("modality", "audio")
             }.toString()
         } catch (e: CancellationException) {
             throw e

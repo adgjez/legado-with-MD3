@@ -12,8 +12,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import io.legado.app.data.dao.AiAgentDao
 import io.legado.app.data.dao.AiMemoryDao
 import io.legado.app.data.dao.AiPurifiedTextCacheDao
-import io.legado.app.data.dao.AiGeneratedAudioDao
-import io.legado.app.data.dao.AiAudioGroupDao
 import io.legado.app.data.dao.AiGenFailureLogDao
 import io.legado.app.data.dao.AiGenTaskDao
 import io.legado.app.data.dao.AiGenVoucherDao
@@ -60,8 +58,6 @@ import io.legado.app.data.entities.AiAgentTrace
 import io.legado.app.data.entities.AiGenFailureLog
 import io.legado.app.data.entities.AiGenTask
 import io.legado.app.data.entities.AiGenVoucher
-import io.legado.app.data.entities.AiGeneratedAudio
-import io.legado.app.data.entities.AiAudioGroup
 import io.legado.app.data.entities.AiGeneratedImage
 import io.legado.app.data.entities.AiImageGroup
 import io.legado.app.data.entities.AiMemoryFragment
@@ -149,8 +145,6 @@ val appDb by lazy {
         AiVideoGroup::class,
         AiStoryPlaylist::class, AiStoryScene::class,
         AiGenTask::class,
-        AiGeneratedAudio::class,
-        AiAudioGroup::class,
         AiGenFailureLog::class,
         AiGenVoucher::class],
     views = [BookSourcePart::class],
@@ -248,8 +242,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val aiStoryPlaylistDao: AiStoryPlaylistDao
     abstract val aiStorySceneDao: AiStorySceneDao
     abstract val aiGenTaskDao: AiGenTaskDao
-    abstract val aiGeneratedAudioDao: AiGeneratedAudioDao
-    abstract val aiAudioGroupDao: AiAudioGroupDao
     abstract val aiGenFailureLogDao: AiGenFailureLogDao
     abstract val aiGenVoucherDao: AiGenVoucherDao
 

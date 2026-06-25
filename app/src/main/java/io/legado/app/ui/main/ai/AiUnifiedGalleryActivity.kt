@@ -2,7 +2,6 @@ package io.legado.app.ui.main.ai
 
 import android.content.Context
 import android.content.Intent
-import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -12,19 +11,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,25 +46,19 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseActivity
-import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
-import io.legado.app.data.entities.AiGeneratedAudio
 import io.legado.app.data.entities.AiGeneratedImage
 import io.legado.app.data.entities.AiGeneratedVideo
 import io.legado.app.databinding.ActivityAiImageGalleryBinding
-import io.legado.app.help.ai.AiAudioGalleryManager
 import io.legado.app.help.ai.AiImageGalleryManager
 import io.legado.app.help.ai.AiImageGalleryManager.GalleryFilter as ImageGalleryFilter
 import io.legado.app.help.ai.AiVideoGalleryManager
 import io.legado.app.help.ai.AiVideoGalleryManager.GalleryFilter as VideoGalleryFilter
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.ui.widget.compose.LegadoMiuixActionButton
 import io.legado.app.ui.widget.compose.LegadoMiuixCard
 import io.legado.app.ui.widget.compose.LegadoMiuixPalette
 import io.legado.app.ui.widget.compose.rememberAppDialogStyle
 import io.legado.app.ui.widget.compose.toMiuixPalette
-import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,7 +69,7 @@ import kotlinx.coroutines.withContext
  *
  * 复用 [ActivityAiImageGalleryBinding]（其布局内含 TitleBar 但无 ComposeView），
  * 因此保留 TitleBar 用于展示标题“AI 创作库”，并隐藏布局中其余仅服务于图片画廊的视图，
- * 再动态追加一个 [ComposeView] 承载三个 Tab（图片 / 视频 / 音频）的内容。
+ * 再动态追加一个 [ComposeView] 承载两个 Tab（图片 / 视频）的内容。
  */
 class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
 
@@ -89,11 +77,7 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
 
     private var images by mutableStateOf<List<AiGeneratedImage>>(emptyList())
     private var videos by mutableStateOf<List<AiGeneratedVideo>>(emptyList())
-    private var audios by mutableStateOf<List<AiGeneratedAudio>>(emptyList())
     private var selectedTab by mutableStateOf(0)
-
-    private var mediaPlayer: MediaPlayer? = null
-    private var playingAudioId by mutableStateOf<String?>(null)
 
     companion object {
         fun start(context: Context) {
@@ -131,9 +115,6 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopAudio()
-        mediaPlayer?.release()
-        mediaPlayer = null
     }
 
     private fun reload() {
@@ -143,16 +124,10 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
                 AiVideoGalleryManager.cleanupExpiredTemporary()
                 val imgs = AiImageGalleryManager.listImages(ImageGalleryFilter.ALL)
                 val vids = AiVideoGalleryManager.listVideos(VideoGalleryFilter.ALL)
-                // AiAudioGalleryManager 暂未提供列表查询，直接走 DAO
-                val auds = appDb.aiGeneratedAudioDao.all()
-                Triple(imgs, vids, auds)
+                Pair(imgs, vids)
             }
             images = data.first
             videos = data.second
-            audios = data.third
-            if (playingAudioId != null && audios.none { it.id == playingAudioId }) {
-                stopAudio()
-            }
         }
     }
 
@@ -167,24 +142,18 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
             ) {
                 Tab(
                     selected = selectedTab == 0,
-                    onClick = { stopAudio(); selectedTab = 0 },
+                    onClick = { selectedTab = 0 },
                     text = { Text("图片") }
                 )
                 Tab(
                     selected = selectedTab == 1,
-                    onClick = { stopAudio(); selectedTab = 1 },
+                    onClick = { selectedTab = 1 },
                     text = { Text("视频") }
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { stopAudio(); selectedTab = 2 },
-                    text = { Text("音频") }
                 )
             }
             when (selectedTab) {
                 0 -> ImageTab(palette)
                 1 -> VideoTab(palette)
-                else -> AudioTab(palette)
             }
         }
     }
@@ -432,129 +401,6 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
                 append(video.prompt.take(20))
             }
         }.ifBlank { video.providerName }
-    }
-
-    // endregion
-
-    // region 音频 Tab
-
-    @Composable
-    private fun AudioTab(palette: LegadoMiuixPalette) {
-        if (audios.isEmpty()) {
-            EmptyHint("暂无AI音频", palette)
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(audios, key = { it.id }) { audio ->
-                    AudioListItem(audio, palette)
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun AudioListItem(audio: AiGeneratedAudio, palette: LegadoMiuixPalette) {
-        val isPlaying = playingAudioId == audio.id
-        LegadoMiuixCard(
-            modifier = Modifier.fillMaxWidth(),
-            color = palette.surface,
-            contentColor = palette.primaryText,
-            cornerRadius = 14.dp,
-            insidePadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = audio.name,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = palette.primaryText
-                    )
-                    Text(
-                        text = buildAudioSubtitle(audio),
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = palette.secondaryText
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                LegadoMiuixActionButton(
-                    text = if (isPlaying) "停止" else "播放",
-                    palette = palette,
-                    primary = !isPlaying,
-                    onClick = { toggleAudio(audio) }
-                )
-            }
-        }
-    }
-
-    private fun toggleAudio(audio: AiGeneratedAudio) {
-        if (playingAudioId == audio.id) {
-            stopAudio()
-            return
-        }
-        lifecycleScope.launch {
-            val file = withContext(Dispatchers.IO) {
-                AiAudioGalleryManager.resolveAudioFile(AiAudioGalleryManager.audioUri(audio.id))
-            }
-            if (file == null || !file.isFile) {
-                toastOnUi("音频文件不存在")
-                return@launch
-            }
-            try {
-                mediaPlayer?.release()
-                mediaPlayer = MediaPlayer().apply {
-                    setDataSource(file.absolutePath)
-                    setOnPreparedListener { mp -> runCatching { mp.start() } }
-                    setOnCompletionListener { stopAudio() }
-                    setOnErrorListener { _, _, _ ->
-                        stopAudio()
-                        true
-                    }
-                    prepareAsync()
-                }
-                playingAudioId = audio.id
-            } catch (e: Exception) {
-                AppLog.put("AI 音频播放失败", e)
-                toastOnUi("播放失败")
-                stopAudio()
-            }
-        }
-    }
-
-    private fun stopAudio() {
-        mediaPlayer?.let { player ->
-            runCatching { if (player.isPlaying) player.stop() }
-            runCatching { player.reset() }
-        }
-        playingAudioId = null
-    }
-
-    private fun buildAudioSubtitle(audio: AiGeneratedAudio): String {
-        return buildString {
-            if (audio.bookName.isNotBlank()) append(audio.bookName)
-            if (audio.audioType.isNotBlank()) {
-                if (isNotEmpty()) append(" · ")
-                append(audioTypeLabel(audio.audioType))
-            }
-            if (audio.duration > 0) {
-                if (isNotEmpty()) append(" · ")
-                append(formatDuration(audio.duration))
-            }
-        }.ifBlank { audio.providerName }
-    }
-
-    private fun audioTypeLabel(type: String): String = when (type) {
-        "music" -> "音乐"
-        "sfx" -> "音效"
-        "speech" -> "语音"
-        else -> type
     }
 
     // endregion

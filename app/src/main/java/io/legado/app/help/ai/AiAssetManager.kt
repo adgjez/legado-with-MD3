@@ -10,7 +10,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.AiGenFailureLog
 import io.legado.app.data.entities.AiGenVoucher
-import io.legado.app.ui.main.ai.AiAudioProviderConfig
 import io.legado.app.ui.main.ai.AiImageProviderConfig
 import io.legado.app.ui.main.ai.AiVideoProviderConfig
 import io.legado.app.utils.getPrefLong
@@ -31,18 +30,15 @@ object AiAssetManager {
     data class StorageUsage(
         val imagesBytes: Long,
         val videosBytes: Long,
-        val audiosBytes: Long,
         val totalBytes: Long
     )
 
     fun storageUsage(): StorageUsage {
         val imagesDir = File(appCtx.filesDir, "ai_images")
         val videosDir = File(appCtx.filesDir, "ai_videos")
-        val audiosDir = File(appCtx.filesDir, "ai_audios")
         val imagesBytes = dirSize(imagesDir)
         val videosBytes = dirSize(videosDir)
-        val audiosBytes = dirSize(audiosDir)
-        return StorageUsage(imagesBytes, videosBytes, audiosBytes, imagesBytes + videosBytes + audiosBytes)
+        return StorageUsage(imagesBytes, videosBytes, imagesBytes + videosBytes)
     }
 
     fun cleanup(thresholdBytes: Long, maxAgeDays: Long = 30) {
@@ -70,8 +66,6 @@ object AiAssetManager {
         appDb.aiGeneratedVideoDao.expiredTemporary(cutoff).forEach {
             AiVideoGalleryManager.deleteVideo(it.id)
         }
-        // Audios
-        AiAudioGalleryManager.cleanupExpiredTemporary()
     }
 
     private fun lruCleanup(targetBytes: Long) {
@@ -97,14 +91,12 @@ object AiAssetManager {
                     put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
                     put(MediaStore.MediaColumns.RELATIVE_PATH, when {
                         mimeType.startsWith("video") -> Environment.DIRECTORY_MOVIES + "/AI Generated"
-                        mimeType.startsWith("audio") -> Environment.DIRECTORY_MUSIC + "/AI Generated"
                         else -> Environment.DIRECTORY_PICTURES + "/AI Generated"
                     })
                 }
                 val uri = appCtx.contentResolver.insert(
                     when {
                         mimeType.startsWith("video") -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                        mimeType.startsWith("audio") -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
                         else -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                     }, values
                 ) ?: error("Failed to create MediaStore entry")
@@ -115,7 +107,6 @@ object AiAssetManager {
                 @Suppress("DEPRECATION")
                 val destDir = when {
                     mimeType.startsWith("video") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
-                    mimeType.startsWith("audio") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
                     else -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                 }
                 val dest = File(destDir, "AI Generated")
@@ -145,22 +136,6 @@ object AiAssetManager {
             }
         }
         return provider.costPerSecond * durationSeconds
-    }
-
-    /**
-     * Estimate the cost of an audio generation task.
-     * Evaluates [AiAudioProviderConfig.costExpression] if it is not blank, otherwise
-     * falls back to 0.0 (AiAudioProviderConfig has no costPerSecond field).
-     */
-    fun estimateCost(provider: AiAudioProviderConfig, durationSeconds: Int): Double {
-        if (provider.costExpression.isNotBlank()) {
-            return evalCostExpression(provider.costExpression) {
-                this["durationSeconds"] = durationSeconds
-                this["provider"] = provider
-            }
-        }
-        // AiAudioProviderConfig has no costPerSecond field; fall back to 0.0
-        return 0.0
     }
 
     /**

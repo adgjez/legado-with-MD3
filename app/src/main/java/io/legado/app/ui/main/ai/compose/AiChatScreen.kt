@@ -40,6 +40,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -91,9 +94,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.ui.widget.compose.releaseComposeImage
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import io.legado.app.R
+import io.legado.app.data.entities.AiGeneratedImage
+import io.legado.app.help.ai.AiImageGalleryManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.ui.about.ReadRecordWidgetStore
@@ -104,15 +110,18 @@ import io.legado.app.ui.main.ai.AiChatSpeechPlayer
 import io.legado.app.ui.main.ai.AiChatViewModel
 import io.legado.app.ui.book.character.compose.CharacterAvatar
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.math.abs
 
 @Stable
 data class AiChatScreenActions(
     val onSend: (String) -> Boolean,
+    val onSendWithImage: ((String, String) -> Unit)? = null,
     val onStop: () -> Unit,
     val onOpenSettings: () -> Unit,
     val onNewChat: () -> Unit,
@@ -131,7 +140,11 @@ data class AiChatScreenActions(
     val onSelectCompanionSession: ((String, String) -> Unit)? = null,
     val onNewCompanionChat: ((String) -> Unit)? = null,
     val onDeleteSession: ((AiChatSession) -> Unit)? = null,
-    val onCompanionLongPress: ((AiChatCompanionConfig) -> Unit)? = null
+    val onCompanionLongPress: ((AiChatCompanionConfig) -> Unit)? = null,
+    val onOpenImageGen: (() -> Unit)? = null,
+    val onOpenVideoGen: (() -> Unit)? = null,
+    val onOpenScriptGen: (() -> Unit)? = null,
+    val onImageToVideo: ((imageId: String) -> Unit)? = null
 )
 
 @Stable
@@ -528,7 +541,8 @@ fun AiChatScreen(
                                             listState.scrollToItem(0)
                                         }
                                     }
-                                }
+                                },
+                                onImageToVideo = actions.onImageToVideo
                             )
                         }
                     }
@@ -702,6 +716,13 @@ private fun AiChatTopBar(
                         }
                         actions.onOpenUnifiedGallery?.let { openUnifiedGallery ->
                             add(AiTopMenuAction("AI 统一素材库", openUnifiedGallery))
+                        }
+                        add(AiTopMenuAction("AI 创作中心") { actions.onOpenImageGen?.invoke() })
+                        actions.onOpenVideoGen?.let { openVideoGen ->
+                            add(AiTopMenuAction("AI 视频生成", openVideoGen))
+                        }
+                        actions.onOpenScriptGen?.let { openScriptGen ->
+                            add(AiTopMenuAction("AI 脚本生成", openScriptGen))
                         }
                     },
                     onDismiss = { menuExpanded = false }
@@ -1258,7 +1279,8 @@ private fun AiMessageRow(
     bubbleMaxWidth: androidx.compose.ui.unit.Dp,
     onSpeak: ((String, AiChatCompanionConfig, String) -> Unit)?,
     onToolPreview: (AiToolDisplayPayload) -> Unit,
-    onProcessExpanded: () -> Unit
+    onProcessExpanded: () -> Unit,
+    onImageToVideo: ((String) -> Unit)? = null
 ) {
     when (item) {
         is AiChatUiItem.User -> AiUserMessageRow(item, userAvatar, style, bubbleMaxWidth)
@@ -1269,7 +1291,8 @@ private fun AiMessageRow(
             bubbleMaxWidth = bubbleMaxWidth,
             onSpeak = onSpeak,
             onToolPreview = onToolPreview,
-            onProcessExpanded = onProcessExpanded
+            onProcessExpanded = onProcessExpanded,
+            onImageToVideo = onImageToVideo
         )
     }
 }
@@ -1324,7 +1347,8 @@ private fun AiAssistantMessageRow(
     bubbleMaxWidth: androidx.compose.ui.unit.Dp,
     onSpeak: ((String, AiChatCompanionConfig, String) -> Unit)?,
     onToolPreview: (AiToolDisplayPayload) -> Unit,
-    onProcessExpanded: () -> Unit
+    onProcessExpanded: () -> Unit,
+    onImageToVideo: ((String) -> Unit)? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1348,7 +1372,7 @@ private fun AiAssistantMessageRow(
                         )
                         is AiMessagePartUi.ProcessChain -> AiProcessPart(part, style, onToolPreview, onProcessExpanded)
                         is AiMessagePartUi.SearchBooks -> AiSearchBookInlinePart(part, style, onToolPreview)
-                        is AiMessagePartUi.Images -> AiImageInlinePart(part, style, onToolPreview)
+                        is AiMessagePartUi.Images -> AiImageInlinePart(part, style, onToolPreview, onImageToVideo)
                     }
                 }
             }
@@ -1559,23 +1583,49 @@ private fun AiSearchBookInlinePart(
 private fun AiImageInlinePart(
     part: AiMessagePartUi.Images,
     style: AiComposeStyle,
-    onToolPreview: (AiToolDisplayPayload) -> Unit
+    onToolPreview: (AiToolDisplayPayload) -> Unit,
+    onImageToVideo: ((String) -> Unit)? = null
 ) {
-    AiInfoPill(
-        text = "图片结果 ${part.images.size} 张",
-        style = style,
-        onClick = {
-            onToolPreview(
-                AiToolDisplayPayload(
-                    type = AiToolPreviewType.ImageResult,
-                    title = "图片结果",
-                    summary = "共 ${part.images.size} 张",
-                    raw = "",
-                    images = part.images
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AiInfoPill(
+            text = "图片结果 ${part.images.size} 张",
+            style = style,
+            onClick = {
+                onToolPreview(
+                    AiToolDisplayPayload(
+                        type = AiToolPreviewType.ImageResult,
+                        title = "图片结果",
+                        summary = "共 ${part.images.size} 张",
+                        raw = "",
+                        images = part.images
+                    )
                 )
-            )
+            }
+        )
+        if (onImageToVideo != null && part.images.isNotEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(style.metrics.cardRadius),
+                color = style.colors.accent.copy(alpha = 0.12f),
+                onClick = {
+                    val firstImage = part.images.firstOrNull()
+                    if (firstImage != null) {
+                        onImageToVideo(firstImage.imageId)
+                    }
+                }
+            ) {
+                Text(
+                    text = "生成视频 →",
+                    color = style.colors.accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
         }
-    )
+    }
 }
 
 @Composable
@@ -1649,11 +1699,24 @@ private fun AiComposer(
     modifier: Modifier = Modifier
 ) {
     var text by rememberSaveable { mutableStateOf("") }
+    var showImagePicker by remember { mutableStateOf(false) }
     fun submitDraft() {
         val content = text.trim()
         if (!requesting && content.isNotEmpty() && actions.onSend(content)) {
             text = ""
         }
+    }
+    // 图片选择器弹窗
+    if (showImagePicker) {
+        AiImagePickerDialog(
+            style = style,
+            onDismiss = { showImagePicker = false },
+            onImageSelected = { imageId ->
+                showImagePicker = false
+                actions.onSendWithImage?.invoke(text, imageId)
+                text = ""
+            }
+        )
     }
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -1664,8 +1727,23 @@ private fun AiComposer(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)
         ) {
+            // 图片附件按钮
+            if (actions.onSendWithImage != null) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showImagePicker = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🖼️",
+                        fontSize = 20.sp
+                    )
+                }
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -1730,3 +1808,117 @@ private fun AiComposer(
 }
 
 private const val searchBookScheme = "legado-search-book://"
+
+// ── 图片选择器弹窗 ──
+
+@Composable
+private fun AiImagePickerDialog(
+    style: AiComposeStyle,
+    onDismiss: () -> Unit,
+    onImageSelected: (String) -> Unit
+) {
+    var images by remember { mutableStateOf<List<AiGeneratedImage>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                AiImageGalleryManager.listImages(AiImageGalleryManager.GalleryFilter.ALL)
+            }.onSuccess { images = it }
+        }
+        loading = false
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(style.metrics.cardRadius),
+            color = style.colors.cardSurface,
+            modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "选择图片",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = style.colors.primaryText
+                    )
+                    Text(
+                        "关闭",
+                        fontSize = 14.sp,
+                        color = style.colors.accent,
+                        modifier = Modifier.clickable(onClick = onDismiss)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (loading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("加载中...", color = style.colors.secondaryText, fontSize = 14.sp)
+                    }
+                } else if (images.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("暂无图片，请先生成图片", color = style.colors.secondaryText, fontSize = 14.sp)
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 100.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(images.size) { index ->
+                            val image = images[index]
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = style.colors.background,
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clickable { onImageSelected(image.id) }
+                                    .border(1.dp, style.colors.stroke, RoundedCornerShape(8.dp))
+                            ) {
+                                Box(contentAlignment = Alignment.BottomStart) {
+                                    AndroidView(
+                                        factory = { ctx ->
+                                            ImageView(ctx).apply {
+                                                scaleType = ImageView.ScaleType.CENTER_CROP
+                                                ImageLoader.loadImage(ctx, image.localPath, this)
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    // Prompt 预览
+                                    Surface(
+                                        color = Color.Black.copy(alpha = 0.55f),
+                                        shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = image.prompt.ifBlank { "无描述" },
+                                            color = Color.White,
+                                            fontSize = 10.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

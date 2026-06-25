@@ -11,7 +11,7 @@ data class AiResolvedTool(
 
 object AiToolRegistry {
 
-    private const val TOOL_SETTINGS_VERSION = 12
+    private const val TOOL_SETTINGS_VERSION = 13
     private val version2AddedDefaultTools = setOf(
         "list_speech_catalogs",
         "assign_character_speech_route",
@@ -63,7 +63,15 @@ object AiToolRegistry {
         "edit_image",
         "inpaint_image",
         "generate_music",
-        "generate_sound_effect"
+        "generate_sound_effect",
+        "generate_book_cover",
+        "generate_scene_illustration",
+        "generate_character_portrait"
+    )
+    private val version13AddedDefaultTools = setOf(
+        "generate_book_cover",
+        "generate_scene_illustration",
+        "generate_character_portrait"
     )
 
     val characterCompanionToolNames = setOf(
@@ -98,7 +106,10 @@ object AiToolRegistry {
         "assign_read_aloud_bgm_ranges",
         "list_world_books",
         "list_world_book_bindings",
-        "get_app_settings"
+        "get_app_settings",
+        "generate_book_cover",
+        "generate_scene_illustration",
+        "generate_character_portrait"
     )
 
     data class ToolMeta(
@@ -239,7 +250,10 @@ object AiToolRegistry {
         "edit_image" to "图片编辑",
         "inpaint_image" to "局部重绘",
         "generate_music" to "生成音乐",
-        "generate_sound_effect" to "生成音效"
+        "generate_sound_effect" to "生成音效",
+        "generate_book_cover" to "生成书籍封面",
+        "generate_scene_illustration" to "生成场景插画",
+        "generate_character_portrait" to "生成角色立绘"
     )
 
     private val nativeToolGroups = mapOf(
@@ -306,8 +320,9 @@ object AiToolRegistry {
         "generate_images" to "AI 生图",
         "edit_image" to "AI 生图",
         "inpaint_image" to "AI 生图",
-        "generate_music" to "AI 生音频",
-        "generate_sound_effect" to "AI 生音频"
+        "generate_book_cover" to "AI 生图",
+        "generate_scene_illustration" to "AI 生图",
+        "generate_character_portrait" to "AI 生图"
     )
 
     fun groupLabelOfTool(name: String): String {
@@ -347,7 +362,7 @@ object AiToolRegistry {
         tools += AiWorldBookTool.resolvedTools()
         tools += AiStoryTool.resolvedTools()
         tools += AiImageToolEnhanced.resolvedTools()
-        tools += AiAudioTool.resolvedTools()
+        tools += AiReadingTool.resolvedTools()
         return tools.distinctBy { it.name }
     }
 
@@ -386,6 +401,7 @@ object AiToolRegistry {
                 if (AppConfig.aiEnabledToolNamesVersion < 10) addAll(version10AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 11) addAll(version11AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 12) addAll(version12AddedDefaultTools)
+                if (AppConfig.aiEnabledToolNamesVersion < 13) addAll(version13AddedDefaultTools)
             }
             val migrated = (stored.ifEmpty { defaultEnabledTools } + additions)
                 .filter { it.isNotBlank() }

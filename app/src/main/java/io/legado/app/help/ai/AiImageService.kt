@@ -17,11 +17,7 @@ import io.legado.app.help.source.getShareScope
 import io.legado.app.ui.main.ai.AiImageProviderConfig
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withTimeout
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.mozilla.javascript.NativeArray
 import org.mozilla.javascript.NativeObject
 import org.json.JSONArray
@@ -105,32 +101,47 @@ object AiImageService {
     ): AiGeneratedImage {
         val baseUrl = normalizeBaseUrl(provider.baseUrl)
         require(baseUrl.isNotBlank()) { "Base URL is empty" }
-        val requestUrl = "${baseUrl.trimEnd('/')}/images/edits"
+        val requestUrl = "${baseUrl.trimEnd('/')}/images/generations"
+        val params = runCatching { JSONObject(provider.defaultParamsJson.ifBlank { "{}" }) }
+            .getOrDefault(JSONObject())
+        val effectiveModel = provider.model.ifBlank { "gpt-image-1" }
+
+        // 构建 extra_body，包含 image 数组和 response_format
+        val extraBody = params.optJSONObject("extra_body")
+            ?: JSONObject().also { params.put("extra_body", it) }
+        // 将本地图片转为 Data URI
+        val imageDataUri = buildImageDataUri(inputImage.localPath)
+        extraBody.put("image", JSONArray().put(imageDataUri))
+        if (!extraBody.has("response_format")) {
+            extraBody.put("response_format", "url")
+        }
+
+        // 构建完整 payload
+        val payload = JSONObject().apply {
+            put("model", effectiveModel)
+            put("prompt", prompt)
+            put("size", params.optString("size", "1024x1024"))
+            // 合并 extra_body 和其他参数
+            val extraBodyFromParams = params.optJSONObject("extra_body")
+            if (extraBodyFromParams != null) {
+                put("extra_body", extraBodyFromParams)
+            }
+            // 合并 params 中除 extra_body/model/prompt/size 之外的其他参数
+            params.keys().forEach { key ->
+                if (key !in setOf("extra_body", "model", "prompt", "size", "endpoint")) {
+                    put(key, params.opt(key))
+                }
+            }
+        }
+
         val startedAt = System.currentTimeMillis()
         var status = ""
         try {
-            val multipartBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("prompt", prompt)
-                .addFormDataPart("model", provider.model.ifBlank { "gpt-image-1" })
-                .apply {
-                    val imageFile = File(inputImage.localPath)
-                    if (imageFile.exists()) {
-                        addFormDataPart("image", "image.png",
-                            imageFile.asRequestBody("image/png".toMediaType()))
-                    }
-                    maskBase64?.let {
-                        val maskBytes = Base64.decode(it, Base64.DEFAULT)
-                        addFormDataPart("mask", "mask.png",
-                            maskBytes.toRequestBody("image/png".toMediaType()))
-                    }
-                }
-                .build()
-
             val response = provider.httpClient().newCallResponse {
                 url(requestUrl)
-                post(multipartBody)
+                postJson(payload.toString())
                 addHeader("Accept", "application/json")
+                addHeader("Content-Type", "application/json")
                 provider.apiKey.takeIf { it.isNotBlank() }?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
@@ -143,16 +154,31 @@ object AiImageService {
                 val root = JSONObject(text)
                 val imageSource = imageFromOpenAiResponse(root)
                     ?: error("No image url or base64 field in response: ${jsonShape(root)}")
-                logRequest(provider, requestUrl, status, startedAt, true, provider.model)
+                logRequest(provider, requestUrl, status, startedAt, true, effectiveModel)
                 return AiImageGalleryManager.saveGeneratedImage(
-                    imageSource, prompt, provider, provider.model,
+                    imageSource, prompt, provider, effectiveModel,
                     metadata ?: AiImageGalleryManager.ImageMetadata()
                 )
             }
         } catch (e: Throwable) {
-            logRequest(provider, requestUrl, status.ifBlank { e.javaClass.simpleName }, startedAt, false, provider.model, e)
+            logRequest(provider, requestUrl, status.ifBlank { e.javaClass.simpleName }, startedAt, false, effectiveModel, e)
             throw e
         }
+    }
+
+    /** 将本地图片路径转为 Data URI Base64 */
+    private fun buildImageDataUri(localPath: String): String {
+        val file = File(localPath)
+        if (!file.isFile) error("Image file not found: $localPath")
+        val bytes = file.readBytes()
+        val ext = localPath.substringAfterLast('.', "png").lowercase()
+        val mime = when (ext) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "webp" -> "image/webp"
+            "gif" -> "image/gif"
+            else -> "image/png"
+        }
+        return "data:$mime;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}"
     }
 
     private suspend fun generateFromImageJs(

@@ -10,6 +10,7 @@ import io.legado.app.help.http.addHeaders
 import io.legado.app.help.http.newCallResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.postJson
+import io.legado.app.model.ReadBook
 import io.legado.app.ui.main.ai.AiChatException
 import io.legado.app.ui.main.ai.AiChatMessage
 import io.legado.app.ui.main.ai.AiContextSummary
@@ -20,8 +21,10 @@ import io.legado.app.ui.main.ai.AiModelConfig
 import io.legado.app.ui.main.ai.AiProviderConfig
 import io.legado.app.ui.main.ai.AiSkillConfig
 import io.legado.app.ui.main.ai.AiWorldBookEntry
+import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
 
@@ -759,6 +762,9 @@ object AiChatService {
                 })
                 put("tool_choice", "auto")
             }
+            put("chat_template_kwargs", JSONObject().apply {
+                put("enable_thinking", true)
+            })
         }.toString()
     }
 
@@ -812,11 +818,17 @@ object AiChatService {
             })
             return
         }
-        val content = message.optString("content")
-        if (content.isNotBlank() && content != "null") {
+        val contentStr = message.optString("content")
+        val contentArray = message.optJSONArray("content")
+        if (contentArray != null) {
             input.put(JSONObject().apply {
                 put("role", role.ifBlank { "user" })
-                put("content", content)
+                put("content", contentArray)
+            })
+        } else if (contentStr.isNotBlank() && contentStr != "null") {
+            input.put(JSONObject().apply {
+                put("role", role.ifBlank { "user" })
+                put("content", contentStr)
             })
         }
         val toolCalls = message.optJSONArray("tool_calls") ?: return
@@ -1215,6 +1227,13 @@ object AiChatService {
                 put("content", prompt)
             }
         }
+        // 注入当前阅读上下文
+        buildReadingContext().takeIf { it.isNotBlank() }?.let { context ->
+            conversation += JSONObject().apply {
+                put("role", "system")
+                put("content", context)
+            }
+        }
         contextSummary?.summary?.takeIf { it.isNotBlank() }?.let { summary ->
             conversation += JSONObject().apply {
                 put("role", "system")
@@ -1287,13 +1306,47 @@ object AiChatService {
                         put("reasoning_content", reasoningContent)
                     }
                 } else {
-                    put("content", stripSearchResultBlocks(message.content))
+                    val stripped = stripSearchResultBlocks(message.content)
+                    put("content", resolveImageContent(stripped))
                 }
             }
         }
         insertWorldBookBeforeLastUser(conversation, worldBookContext)
         insertWorldBookByDepth(conversation, worldBookContext)
         return conversation
+    }
+
+    private fun resolveImageContent(content: String): Any {
+        val imageRegex = Regex("""\[图片:\s*([^\]]+)\]\s*""")
+        val matchResult = imageRegex.find(content) ?: return content
+        val imageId = matchResult.groupValues[1]
+        val textContent = content.replace(imageRegex, "").trim()
+        val image = AiImageGalleryManager.getImage(imageId) ?: return content
+        val file = File(image.localPath)
+        if (!file.isFile) return content
+        val bytes = file.readBytes()
+        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        val ext = file.extension.lowercase()
+        val mimeType = when (ext) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "webp" -> "image/webp"
+            "gif" -> "image/gif"
+            else -> "image/png"
+        }
+        val dataUri = "data:$mimeType;base64,$base64"
+        return JSONArray().apply {
+            put(JSONObject().apply {
+                put("type", "text")
+                put("text", textContent.ifBlank { content })
+            })
+            put(JSONObject().apply {
+                put("type", "image_url")
+                put("image_url", JSONObject().apply {
+                    put("url", dataUri)
+                })
+            })
+        }
     }
 
     private fun buildToolOnlyConversation(
@@ -1455,6 +1508,17 @@ object AiChatService {
             body.isNotBlank() -> body
             else -> "未绑定作品"
         }
+    }
+
+    private fun buildReadingContext(): String {
+        val book = ReadBook.book ?: return ""
+        val chapter = ReadBook.curTextChapter?.chapter
+        val sb = StringBuilder()
+        sb.append("[当前阅读状态]\n")
+        sb.append("正在阅读: 《${book.name}》")
+        if (book.author.isNotBlank()) sb.append(" - ${book.author}")
+        if (chapter?.title.isNullOrBlank().not()) sb.append("\n当前章节: ${chapter?.title}")
+        return sb.toString()
     }
 
     private fun estimateStaticRequestTokens(

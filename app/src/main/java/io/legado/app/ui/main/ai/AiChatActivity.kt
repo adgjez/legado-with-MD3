@@ -59,6 +59,9 @@ import io.legado.app.data.entities.BookCharacter
 import io.legado.app.databinding.ActivityAiChatBinding
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.ai.AiImageGalleryManager
+import io.legado.app.help.ai.AiImageService
+import io.legado.app.help.ai.AiVideoGalleryManager
+import io.legado.app.help.ai.AiVideoService
 import io.legado.app.help.book.characterBookKey
 import io.legado.app.help.character.BookCharacterProfileMeta
 import io.legado.app.help.config.AppConfig
@@ -95,6 +98,11 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
     private val refreshToken = mutableIntStateOf(0)
     private var characterPickerGroups by mutableStateOf<List<CharacterPickGroup>>(emptyList())
     private var characterPickerVisible by mutableStateOf(false)
+    private var genDialogVisible by mutableStateOf(false)
+    private var genDialogInitialTab by mutableStateOf(0)
+    private var genDialogInputImageId by mutableStateOf<String?>(null)
+    private var genDialogTailImageId by mutableStateOf<String?>(null)
+    private var scriptGenDialogVisible by mutableStateOf(false)
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         binding.composeRoot.setViewCompositionStrategy(
@@ -108,6 +116,7 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                 refreshToken = refreshToken.intValue,
                 actions = AiChatScreenActions(
                     onSend = ::dispatchSend,
+                    onSendWithImage = { prompt, imageId -> dispatchSend("$prompt [图片: $imageId]") },
                     onStop = ::cancelCurrentRequest,
                     onOpenSettings = ::openAiSettings,
                     onNewChat = ::startNewChatFromMenu,
@@ -128,7 +137,11 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     onSelectCompanionSession = ::loadCompanionSessionFromDrawer,
                     onNewCompanionChat = ::startNewChatFromDrawer,
                     onDeleteSession = ::confirmDeleteHistorySession,
-                    onCompanionLongPress = ::showCompanionActions
+                    onCompanionLongPress = ::showCompanionActions,
+                    onOpenImageGen = { showGenDialog(0) },
+                    onOpenVideoGen = { showGenDialog(1) },
+                    onOpenScriptGen = { scriptGenDialogVisible = true },
+                    onImageToVideo = { imageId -> showGenDialog(1, imageId) }
                 )
             )
             if (characterPickerVisible) {
@@ -138,6 +151,27 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     onCharacterSelected = { group, character ->
                         characterPickerVisible = false
                         addCharacterCompanion(group, character)
+                    }
+                )
+            }
+            if (genDialogVisible) {
+                AiGenDialog(
+                    onDismiss = { genDialogVisible = false },
+                    onGenerateVideo = ::onGenerateVideo,
+                    onGenerateImage = ::onGenerateImage,
+                    initialTab = genDialogInitialTab,
+                    initialInputImageId = genDialogInputImageId,
+                    initialTailImageId = genDialogTailImageId
+                )
+            }
+            if (scriptGenDialogVisible) {
+                AiScriptGenDialog(
+                    onDismiss = { scriptGenDialogVisible = false },
+                    onSave = { script, _, _ ->
+                        scriptGenDialogVisible = false
+                        if (script.isNotBlank()) {
+                            dispatchSend(script)
+                        }
                     }
                 )
             }
@@ -210,6 +244,90 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
 
     private fun openUnifiedGallery() {
         startActivity(android.content.Intent(this, AiUnifiedGalleryActivity::class.java))
+    }
+
+    private fun showGenDialog(tab: Int, inputImageId: String? = null, tailImageId: String? = null) {
+        genDialogInitialTab = tab
+        genDialogInputImageId = inputImageId
+        genDialogTailImageId = tailImageId
+        genDialogVisible = true
+    }
+
+    private fun onGenerateImage(
+        prompt: String,
+        negativePrompt: String,
+        size: String,
+        providerId: String?,
+        referenceImageId: String?
+    ) {
+        genDialogVisible = false
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val provider = if (providerId != null) AiImageService.providerByIdOrNull(providerId)
+                else AiImageService.currentProviderOrNull()
+                if (provider == null) {
+                    withContext(Dispatchers.Main) { toastOnUi("未配置图片模型") }
+                    return@launch
+                }
+                val image = AiImageService.generateAndStore(
+                    prompt = prompt,
+                    provider = provider,
+                    metadata = AiImageGalleryManager.ImageMetadata(
+                        sourceType = AiImageGalleryManager.SOURCE_TYPE_CHAT,
+                        sourceText = prompt
+                    )
+                )
+                withContext(Dispatchers.Main) {
+                    toastOnUi("图片已生成")
+                    refreshToken.intValue += 1
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    toastOnUi("图片生成失败: ${e.localizedMessage ?: e.javaClass.simpleName}")
+                }
+            }
+        }
+    }
+
+    private fun onGenerateVideo(
+        prompt: String,
+        negativePrompt: String,
+        duration: Long,
+        aspectRatio: String,
+        providerId: String?,
+        inputImageId: String?,
+        tailImageId: String?
+    ) {
+        genDialogVisible = false
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val provider = if (providerId != null) AiVideoService.providerByIdOrNull(providerId)
+                else AiVideoService.currentProviderOrNull()
+                if (provider == null) {
+                    withContext(Dispatchers.Main) { toastOnUi("未配置视频模型") }
+                    return@launch
+                }
+                val video = AiVideoService.generateAndStore(
+                    prompt = prompt,
+                    inputImageId = inputImageId,
+                    tailImageId = tailImageId,
+                    referenceImageId = null,
+                    provider = provider,
+                    metadata = AiVideoGalleryManager.VideoMetadata(
+                        sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHAT,
+                        sourceText = prompt
+                    )
+                )
+                withContext(Dispatchers.Main) {
+                    toastOnUi("视频已生成")
+                    refreshToken.intValue += 1
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    toastOnUi("视频生成失败: ${e.localizedMessage ?: e.javaClass.simpleName}")
+                }
+            }
+        }
     }
 
     private fun selectCompanion(companionId: String) {

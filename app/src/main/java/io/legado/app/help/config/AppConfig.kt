@@ -31,7 +31,6 @@ import io.legado.app.ui.main.ai.AiChatSession
 import io.legado.app.ui.main.ai.AiContextSummary
 import io.legado.app.ui.main.ai.AiImageProviderConfig
 import io.legado.app.ui.main.ai.AiVideoProviderConfig
-import io.legado.app.ui.main.ai.AiAudioProviderConfig
 import io.legado.app.ui.main.ai.AiPersonaConfig
 import io.legado.app.ui.main.ai.AiMcpServerConfig
 import io.legado.app.ui.main.ai.AiModelConfig
@@ -571,22 +570,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val aiReadAloudRoleFirstResponseTimeoutMillis: Long
         get() = aiReadAloudRoleFirstResponseTimeoutSeconds * 1000L
 
-    var aiReadAloudAudioModelId: String?
-        get() = optionalSceneAiModelId(PreferKey.aiReadAloudAudioModelId)
-        set(value) = setOptionalSceneAiModelId(PreferKey.aiReadAloudAudioModelId, value)
-
-    val aiReadAloudAudioModelConfig: AiModelConfig?
-        get() = aiModelConfigList.firstOrNull { it.id == aiReadAloudAudioModelId }
-            ?: aiReadAloudRoleModelConfig
-
-    var aiReadAloudAudioBackupModelId: String?
-        get() = optionalSceneAiModelId(PreferKey.aiReadAloudAudioBackupModelId)
-        set(value) = setOptionalSceneAiModelId(PreferKey.aiReadAloudAudioBackupModelId, value)
-
-    val aiReadAloudAudioBackupModelConfig: AiModelConfig?
-        get() = aiModelConfigList.firstOrNull { it.id == aiReadAloudAudioBackupModelId }
-            ?: aiReadAloudRoleBackupModelConfig
-
     fun aiProviderForModel(model: AiModelConfig?): AiProviderConfig? {
         val providerId = model?.providerId ?: return null
         return aiProviderList.firstOrNull { it.id == providerId }
@@ -965,59 +948,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.removePref(PreferKey.aiCurrentVideoProviderId)
         } else if (nextId != currentId) {
             appCtx.putPrefString(PreferKey.aiCurrentVideoProviderId, nextId)
-        }
-    }
-
-    var aiAudioProviderList: List<AiAudioProviderConfig>
-        get() = GSON.fromJsonArray<AiAudioProviderConfig>(
-            appCtx.getPrefString(PreferKey.aiAudioProviderList)
-        ).getOrDefault(emptyList())
-        set(value) {
-            if (value.isEmpty()) appCtx.removePref(PreferKey.aiAudioProviderList)
-            else appCtx.putPrefString(PreferKey.aiAudioProviderList, GSON.toJson(value))
-            syncAiAudioState(value)
-        }
-
-    val aiEnabledAudioProviders: List<AiAudioProviderConfig>
-        get() = aiAudioProviderList.filter { it.enabled }
-
-    var aiCurrentAudioProviderId: String?
-        get() = appCtx.getPrefString(PreferKey.aiCurrentAudioProviderId)
-        set(value) {
-            if (value.isNullOrBlank()) appCtx.removePref(PreferKey.aiCurrentAudioProviderId)
-            else appCtx.putPrefString(PreferKey.aiCurrentAudioProviderId, value)
-        }
-
-    val aiCurrentAudioProvider: AiAudioProviderConfig?
-        get() {
-            val providers = aiEnabledAudioProviders
-            val currentId = aiCurrentAudioProviderId
-            if (currentId.isNullOrBlank()) {
-                return providers.firstOrNull()?.also { aiCurrentAudioProviderId = it.id }
-            }
-            return providers.firstOrNull { it.id == currentId }
-                ?: providers.firstOrNull()?.also { aiCurrentAudioProviderId = it.id }
-        }
-
-    fun findEnabledAudioProvider(id: String?): AiAudioProviderConfig? {
-        val cleanId = id?.trim().orEmpty()
-        if (cleanId.isBlank()) return null
-        return aiEnabledAudioProviders.firstOrNull { it.id == cleanId }
-    }
-
-    private fun syncAiAudioState(
-        providers: List<AiAudioProviderConfig>,
-        preferredId: String? = null
-    ) {
-        val enabled = providers.filter { it.enabled }
-        val currentId = appCtx.getPrefString(PreferKey.aiCurrentAudioProviderId)
-        val nextId = enabled.firstOrNull { it.id == preferredId }?.id
-            ?: enabled.firstOrNull { it.id == currentId }?.id
-            ?: enabled.firstOrNull()?.id
-        if (nextId.isNullOrBlank()) {
-            appCtx.removePref(PreferKey.aiCurrentAudioProviderId)
-        } else if (nextId != currentId) {
-            appCtx.putPrefString(PreferKey.aiCurrentAudioProviderId, nextId)
         }
     }
 
@@ -1990,9 +1920,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             PreferKey.aiAskModelId,
             PreferKey.aiSummaryModelId,
             PreferKey.aiReadAloudRoleModelId,
-            PreferKey.aiReadAloudRoleBackupModelId,
-            PreferKey.aiReadAloudAudioModelId,
-            PreferKey.aiReadAloudAudioBackupModelId
+            PreferKey.aiReadAloudRoleBackupModelId
         )
         val validModelIds = models.mapTo(hashSetOf()) { it.id }
         val providerId = providers.firstOrNull {
@@ -2112,8 +2040,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
                 id = imageProviderId,
                 name = "Agnes AI 图片",
                 baseUrl = agnesBaseUrl,
-                model = "agnes-image-2.0-flash",
-                defaultParamsJson = "{\n  \"size\": \"1024x1024\"\n}"
+                model = "agnes-image-2.1-flash",
+                defaultParamsJson = "{\n  \"size\": \"1024x1024\",\n  \"extra_body\": {\n    \"response_format\": \"url\"\n  }\n}"
             )
         }
         if (aiCurrentImageProviderId.isNullOrBlank() || aiCurrentImageProviderId == imageProviderId) {
