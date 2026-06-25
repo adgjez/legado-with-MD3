@@ -10,7 +10,7 @@ import org.mozilla.javascript.Context
 import org.mozilla.javascript.ScriptableObject
 import splitties.init.appCtx
 import java.io.File
-import java.util.Base64
+import android.util.Base64
 
 object AiSandboxBridge {
 
@@ -27,7 +27,7 @@ object AiSandboxBridge {
     fun readImageAsBase64(path: String): String? {
         return runCatching {
             val file = resolveSafePath(path) ?: error("Path not allowed: $path")
-            Base64.getEncoder().encodeToString(file.readBytes())
+            Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
         }.getOrElse { e ->
             AppLog.put("Sandbox: readImage failed", e)
             null

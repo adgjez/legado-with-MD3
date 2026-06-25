@@ -34,11 +34,7 @@ object NetworkQualityInterceptor {
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        connectivityManager.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { updateState() }
-            override fun onLost(network: Network) { updateState() }
-            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) { updateState() }
-        })
+        connectivityManager.registerNetworkCallback(request, networkCallback)
         updateState()
     }
 
@@ -51,7 +47,7 @@ object NetworkQualityInterceptor {
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) { updateState() }
         override fun onLost(network: Network) { updateState() }
-        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) { updateState() }
+        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) { updateState() }
     }
 
     fun updateState() {

@@ -219,7 +219,7 @@ object AiAssetManager {
                 durationSeconds = durationSeconds,
                 success = success
             )
-            appDb.aiGenVoucherDao().insert(voucher)
+            appDb.aiGenVoucherDao.insert(voucher)
         }
     }
 
@@ -249,7 +249,7 @@ object AiAssetManager {
                 bookKey = bookKey,
                 chapterIndex = chapterIndex
             )
-            appDb.aiGenFailureLogDao().insert(log)
+            appDb.aiGenFailureLogDao.insert(log)
         }
     }
 
@@ -258,7 +258,7 @@ object AiAssetManager {
      */
     suspend fun totalCostSince(since: Long): Double {
         return withContext(Dispatchers.IO) {
-            appDb.aiGenVoucherDao().totalCostSince(since)
+            appDb.aiGenVoucherDao.totalCostSince(since)
         }
     }
 
@@ -267,7 +267,7 @@ object AiAssetManager {
      */
     suspend fun costByModality(modality: String, since: Long): Double {
         return withContext(Dispatchers.IO) {
-            appDb.aiGenVoucherDao().costByModalitySince(modality, since)
+            appDb.aiGenVoucherDao.costByModalitySince(modality, since)
         }
     }
 
@@ -276,7 +276,7 @@ object AiAssetManager {
      */
     suspend fun recentFailures(limit: Int = 50): List<AiGenFailureLog> {
         return withContext(Dispatchers.IO) {
-            appDb.aiGenFailureLogDao().recent(limit)
+            appDb.aiGenFailureLogDao.recent(limit)
         }
     }
 

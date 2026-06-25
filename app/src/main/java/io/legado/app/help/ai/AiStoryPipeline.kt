@@ -44,14 +44,14 @@ object AiStoryPipeline {
 
                 // Create playlist entity
                 val playlistId = UUID.randomUUID().toString()
-                val scenes = AiStoryDirector.plannedScenesToEntities(playlistId, plan)
+                val scenes = AiStoryDirector.plannedScenesToEntities(playlistId, plan).toMutableList()
                 val playlist = AiStoryPlaylist(
                     id = playlistId,
                     bookKey = bookKey,
                     bookName = bookName,
                     chapterTitle = chapterTitle,
                     sceneCount = plan.scenes.size,
-                    totalDuration = AiStoryPlaylist.calculateTotalDuration(scenes),
+                    totalDuration = io.legado.app.help.ai.AiStoryPlaylist.calculateTotalDuration(scenes),
                     status = "processing"
                 )
                 appDb.aiStoryPlaylistDao.insert(playlist)
@@ -115,6 +115,8 @@ object AiStoryPipeline {
                         val video = AiVideoService.generateAndStore(
                             prompt = scene.visualPrompt,
                             inputImageId = scene.imageId,
+                            tailImageId = null,
+                            referenceImageId = null,
                             provider = videoProvider,
                             metadata = metadata
                         )

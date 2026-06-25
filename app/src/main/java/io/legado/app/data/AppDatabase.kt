@@ -250,8 +250,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val aiGenTaskDao: AiGenTaskDao
     abstract val aiGeneratedAudioDao: AiGeneratedAudioDao
     abstract val aiAudioGroupDao: AiAudioGroupDao
-    abstract fun aiGenFailureLogDao(): AiGenFailureLogDao
-    abstract fun aiGenVoucherDao(): AiGenVoucherDao
+    abstract val aiGenFailureLogDao: AiGenFailureLogDao
+    abstract val aiGenVoucherDao: AiGenVoucherDao
 
     companion object {
 

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
@@ -91,8 +92,11 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
         }
         binding.titleBar.title = title.ifBlank { getString(R.string.ai_video_gallery) }
 
-        binding.composeView.setContent {
-            VideoGalleryScreen()
+        binding.composeView.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                VideoGalleryScreen()
+            }
         }
     }
 
