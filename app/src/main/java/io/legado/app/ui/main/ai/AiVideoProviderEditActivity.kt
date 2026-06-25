@@ -477,7 +477,7 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(style.actionRadius),
-            colors = CardDefaults.cardColors(containerColor = palette.fieldSurface.copy(alpha = 0.5f))
+            colors = CardDefaults.cardColors(containerColor = palette.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
