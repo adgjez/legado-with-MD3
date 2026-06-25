@@ -168,7 +168,13 @@ object AiToolRegistry {
         "generate_video_from_image",
         "extract_video_frame",
         "continue_video_from_frame",
-        "sanitize_text"
+        "sanitize_text",
+        "generate_scene",
+        "generate_images",
+        "edit_image",
+        "inpaint_image",
+        "generate_music",
+        "generate_sound_effect"
     )
 
     private val nativeToolLabels = mapOf(

@@ -111,6 +111,17 @@ object AiGenPoller {
         _backgroundPolling.value = false
     }
 
+    /**
+     * Clean up all scopes and jobs. Call this when the app is shutting down
+     * or when the poller is no longer needed to prevent coroutine leaks.
+     */
+    fun cleanup() {
+        stopForegroundPolling()
+        stopBackgroundPolling()
+        pollScope.cancel()
+        backgroundScope.cancel()
+    }
+
     private suspend fun pollActiveTasks() {
         val activeTasks = appDb.aiGenTaskDao.activeTasks()
         val now = System.currentTimeMillis()
