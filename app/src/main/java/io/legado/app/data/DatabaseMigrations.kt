@@ -34,6 +34,7 @@ object DatabaseMigrations {
             migration_115_116,
             migration_116_117,
             migration_117_118,
+            migration_118_119,
         )
     }
 
@@ -334,6 +335,19 @@ object DatabaseMigrations {
     private val migration_117_118 = object : Migration(117, 118) {
         override fun migrate(db: SupportSQLiteDatabase) {
             // No-op: entity now matches existing table schema
+        }
+    }
+
+    /**
+     * v118 → v119: Removed @ColumnInfo(defaultValue) from all 10 AI entities.
+     * Room's post-migration validation checks column DEFAULT clauses. Tables created
+     * by Room onCreate (fresh install at v116) didn't have DEFAULT, but entities
+     * expected them → crash. Removing @ColumnInfo makes Room skip DEFAULT validation.
+     * The Kotlin default values (= "", = 0) still provide application-level defaults.
+     */
+    private val migration_118_119 = object : Migration(118, 119) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // No-op: entities no longer expect DEFAULT clauses, matching all table states
         }
     }
 

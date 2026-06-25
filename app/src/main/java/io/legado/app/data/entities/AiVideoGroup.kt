@@ -1,6 +1,5 @@
 package io.legado.app.data.entities
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -8,10 +7,7 @@ import androidx.room.PrimaryKey
 data class AiVideoGroup(
     @PrimaryKey
     val id: String,
-    @ColumnInfo(defaultValue = "")
     val name: String,
-    @ColumnInfo(defaultValue = "0")
     val createdAt: Long = System.currentTimeMillis(),
-    @ColumnInfo(defaultValue = "0")
     val sortOrder: Int = 0
 )
