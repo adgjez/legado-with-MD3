@@ -54,10 +54,8 @@ object AiGenTaskManager {
 
     suspend fun submitTask(taskId: Long, remoteTaskId: String) {
         withContext(Dispatchers.IO) {
-            appDb.aiGenTaskDao.updateStatus(taskId, "submitted")
-            appDb.aiGenTaskDao.get(taskId)?.let { task ->
-                _taskUpdates.emit(task.copy(status = "submitted", remoteTaskId = remoteTaskId))
-            }
+            appDb.aiGenTaskDao.updateSubmitInfo(taskId, remoteTaskId, "submitted")
+            appDb.aiGenTaskDao.get(taskId)?.let { _taskUpdates.emit(it) }
         }
     }
 

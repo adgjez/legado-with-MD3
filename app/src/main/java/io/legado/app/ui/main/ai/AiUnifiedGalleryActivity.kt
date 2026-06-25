@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import io.legado.app.R
 import io.legado.app.base.BaseActivity
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
@@ -101,7 +102,7 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
-        binding.titleBar.title = "AI 创作库"
+        binding.titleBar.title = getString(R.string.ai_unified_gallery)
         // 该 Binding 没有 ComposeView，隐藏仅服务于图片画廊的视图，再用 ComposeView 承载内容
         binding.etSearch.isVisible = false
         binding.filterContainer.isVisible = false

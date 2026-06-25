@@ -1,5 +1,6 @@
 package io.legado.app.help.ai
 
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 
 object AiStoryTool {
@@ -54,8 +55,10 @@ object AiStoryTool {
                         put("status", playlist.status)
                         put("message", "分镜视频生成完成，共 ${playlist.sceneCount} 个场景")
                     }.toString()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
-                    "{\"ok\":false,\"error\":\"${e.message?.replace("\"", "\\\"") ?: "Unknown error"}\"}"
+                    JSONObject().put("ok", false).put("error", e.message ?: "Unknown error").toString()
                 }
             }
         )

@@ -57,9 +57,7 @@ object AiToolRegistry {
         "sanitize_text",
         "generate_scene"
     )
-    private val version11AddedDefaultTools = setOf(
-        "generate_scene"
-    )
+    private val version11AddedDefaultTools = emptySet<String>()
     private val version12AddedDefaultTools = setOf(
         "generate_images",
         "edit_image",

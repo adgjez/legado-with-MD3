@@ -76,6 +76,8 @@ object AiGenPoller {
             while (isActive) {
                 try {
                     pollActiveTasks()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLog.put("Foreground poll error", e)
                 }
@@ -102,6 +104,8 @@ object AiGenPoller {
             while (isActive) {
                 try {
                     pollActiveTasks()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLog.put("Background poll error", e)
                 }
@@ -204,19 +208,28 @@ object AiGenPoller {
                 AiGenTaskManager.updateEmotionalHint(task.id, hint)
                 AiGenTaskManager.updateProgress(task.id, newStatus, status.progress, status.previewUrl ?: "")
                 if (newStatus == "downloading") {
-                    val file = AiVideoService.download(task.remoteTaskId, provider)
-                    // Store via gallery manager
-                    val metadata = AiVideoGalleryManager.VideoMetadata(
-                        bookName = "", sourceType = task.sourceType
-                    )
-                    val video = AiVideoGalleryManager.saveGeneratedVideo(
-                        videoSource = file.absolutePath,
-                        prompt = task.prompt,
-                        provider = provider,
-                        model = task.model,
-                        metadata = metadata
-                    )
-                    AiGenTaskManager.completeTask(task.id, video.id, video.localPath, 0.0)
+                    // If resultId is already set, a previous download succeeded but
+                    // completeTask failed. Skip re-downloading to prevent duplicates.
+                    if (task.resultId.isBlank()) {
+                        val file = AiVideoService.download(task.remoteTaskId, provider)
+                        val metadata = AiVideoGalleryManager.VideoMetadata(
+                            bookName = "", sourceType = task.sourceType
+                        )
+                        val video = AiVideoGalleryManager.saveGeneratedVideo(
+                            videoSource = file.absolutePath,
+                            prompt = task.prompt,
+                            provider = provider,
+                            model = task.model,
+                            metadata = metadata
+                        )
+                        // Store result before completing so retry won't re-download
+                        appDb.aiGenTaskDao.updateResult(task.id, "downloading", video.id, video.localPath, 0.0)
+                    }
+                    // Re-read task to get stored resultId/resultPath
+                    val updated = appDb.aiGenTaskDao.get(task.id)
+                    if (updated != null && updated.resultId.isNotBlank()) {
+                        AiGenTaskManager.completeTask(task.id, updated.resultId, updated.resultPath, 0.0)
+                    }
                 } else if (newStatus == "failed") {
                     AiGenTaskManager.failTask(task.id, "Video generation failed")
                 }
@@ -243,18 +256,28 @@ object AiGenPoller {
                 AiGenTaskManager.updateEmotionalHint(task.id, hint)
                 AiGenTaskManager.updateProgress(task.id, newStatus, status.progress, "")
                 if (newStatus == "downloading") {
-                    val file = AiAudioService.download(task.remoteTaskId, provider)
-                    val metadata = AiAudioGalleryManager.AudioMetadata(
-                        sourceType = task.sourceType
-                    )
-                    val audio = AiAudioGalleryManager.saveGeneratedAudio(
-                        audioSource = file.absolutePath,
-                        prompt = task.prompt,
-                        provider = provider,
-                        model = task.model,
-                        metadata = metadata
-                    )
-                    AiGenTaskManager.completeTask(task.id, audio.id, audio.localPath, 0.0)
+                    // If resultId is already set, a previous download succeeded but
+                    // completeTask failed. Skip re-downloading to prevent duplicates.
+                    if (task.resultId.isBlank()) {
+                        val file = AiAudioService.download(task.remoteTaskId, provider)
+                        val metadata = AiAudioGalleryManager.AudioMetadata(
+                            sourceType = task.sourceType
+                        )
+                        val audio = AiAudioGalleryManager.saveGeneratedAudio(
+                            audioSource = file.absolutePath,
+                            prompt = task.prompt,
+                            provider = provider,
+                            model = task.model,
+                            metadata = metadata
+                        )
+                        // Store result before completing so retry won't re-download
+                        appDb.aiGenTaskDao.updateResult(task.id, "downloading", audio.id, audio.localPath, 0.0)
+                    }
+                    // Re-read task to get stored resultId/resultPath
+                    val updated = appDb.aiGenTaskDao.get(task.id)
+                    if (updated != null && updated.resultId.isNotBlank()) {
+                        AiGenTaskManager.completeTask(task.id, updated.resultId, updated.resultPath, 0.0)
+                    }
                 } else if (newStatus == "failed") {
                     AiGenTaskManager.failTask(task.id, "Audio generation failed")
                 }

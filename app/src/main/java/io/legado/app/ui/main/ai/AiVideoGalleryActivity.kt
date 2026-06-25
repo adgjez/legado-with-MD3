@@ -2,8 +2,8 @@ package io.legado.app.ui.main.ai
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -398,7 +398,12 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
                     val file = AiVideoGalleryManager.resolveVideoFile(AiVideoGalleryManager.videoUri(video.id))
                     if (file != null) {
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(Uri.fromFile(file), "video/*")
+                            val uri = FileProvider.getUriForFile(
+                                this@AiVideoGalleryActivity,
+                                "${packageName}.fileProvider",
+                                file
+                            )
+                            setDataAndType(uri, "video/*")
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         startActivity(intent)

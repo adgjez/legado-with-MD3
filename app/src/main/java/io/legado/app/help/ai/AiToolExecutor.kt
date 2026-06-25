@@ -2,6 +2,7 @@ package io.legado.app.help.ai
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.AiGenTask
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
@@ -124,6 +125,9 @@ internal object AiToolExecutor {
             }
             throw lastError ?: IllegalStateException("Tool failed")
         }.getOrElse { throwable ->
+            if (throwable is CancellationException && throwable !is TimeoutCancellationException) {
+                throw throwable
+            }
             JSONObject().apply {
                 put("ok", false)
                 put(
@@ -194,6 +198,9 @@ internal object AiToolExecutor {
                 submitAsyncTask(toolCall.name, args)
             }
         }.getOrElse { throwable ->
+            if (throwable is CancellationException && throwable !is TimeoutCancellationException) {
+                throw throwable
+            }
             JSONObject().apply {
                 put("ok", false)
                 put(
@@ -265,6 +272,8 @@ internal object AiToolExecutor {
                 put("remoteTaskId", submitResult.remoteTaskId)
                 put("modality", "video")
             }.toString()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AiGenTaskManager.failTask(taskId, e.localizedMessage ?: e.javaClass.simpleName)
             JSONObject().apply {
@@ -304,6 +313,8 @@ internal object AiToolExecutor {
                 put("remoteTaskId", submitResult.remoteTaskId)
                 put("modality", "audio")
             }.toString()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AiGenTaskManager.failTask(taskId, e.localizedMessage ?: e.javaClass.simpleName)
             JSONObject().apply {
@@ -345,6 +356,9 @@ internal object AiToolExecutor {
                 runStoryPipeline(args, onProgress)
             }
         }.getOrElse { throwable ->
+            if (throwable is CancellationException && throwable !is TimeoutCancellationException) {
+                throw throwable
+            }
             JSONObject().apply {
                 put("ok", false)
                 put(

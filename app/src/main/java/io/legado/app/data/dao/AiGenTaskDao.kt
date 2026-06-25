@@ -14,7 +14,7 @@ interface AiGenTaskDao {
     @Query("select * from ai_gen_tasks where id = :id")
     fun get(id: Long): AiGenTask?
 
-    @Query("select * from ai_gen_tasks where status in ('pending','submitted','processing','downloading') order by priority desc, createdAt asc")
+    @Query("select * from ai_gen_tasks where status in ('pending','submitted','processing','downloading') order by priority desc, createdAt asc limit 50")
     fun activeTasks(): List<AiGenTask>
 
     @Query("select * from ai_gen_tasks where parentTaskId = :parentId order by createdAt asc")
@@ -25,6 +25,9 @@ interface AiGenTaskDao {
 
     @Query("update ai_gen_tasks set status = :status, updatedAt = :updatedAt where id = :id")
     fun updateStatus(id: Long, status: String, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("update ai_gen_tasks set remoteTaskId = :remoteTaskId, status = :status, updatedAt = :updatedAt where id = :id")
+    fun updateSubmitInfo(id: Long, remoteTaskId: String, status: String, updatedAt: Long = System.currentTimeMillis())
 
     @Query("update ai_gen_tasks set status = :status, progress = :progress, previewUrl = :previewUrl, updatedAt = :updatedAt where id = :id")
     fun updateProgress(id: Long, status: String, progress: Int, previewUrl: String, updatedAt: Long = System.currentTimeMillis())

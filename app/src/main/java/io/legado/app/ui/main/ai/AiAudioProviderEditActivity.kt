@@ -285,6 +285,14 @@ class AiAudioProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
             toastOnUi("请输入 Base URL")
             return
         }
+        if (providerType == AiAudioProviderConfig.TYPE_OPENAI &&
+            baseUrlText.isNotBlank() &&
+            !baseUrlText.startsWith("http://") &&
+            !baseUrlText.startsWith("https://")
+        ) {
+            toastOnUi("Base URL 需以 http:// 或 https:// 开头")
+            return
+        }
         if (providerType == AiAudioProviderConfig.TYPE_OPENAI && apiKeyText.isBlank()) {
             toastOnUi("请输入 API Key")
             return

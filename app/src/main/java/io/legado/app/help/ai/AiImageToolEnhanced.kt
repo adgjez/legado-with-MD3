@@ -1,6 +1,7 @@
 package io.legado.app.help.ai
 
 import io.legado.app.data.entities.AiGeneratedImage
+import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -61,6 +62,8 @@ object AiImageToolEnhanced {
                         put("count", images.size)
                         put("images", imagesArray)
                     }.toString()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     errorJson(e.localizedMessage ?: e.javaClass.simpleName)
                 }
@@ -111,6 +114,8 @@ object AiImageToolEnhanced {
                         put("imageId", image.id)
                         put("imagePath", image.localPath)
                     }.toString()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     errorJson(e.localizedMessage ?: e.javaClass.simpleName)
                 }
@@ -165,6 +170,8 @@ object AiImageToolEnhanced {
                         put("imageId", image.id)
                         put("imagePath", image.localPath)
                     }.toString()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     errorJson(e.localizedMessage ?: e.javaClass.simpleName)
                 }
