@@ -65,6 +65,8 @@ object PreferKey {
     const val aiReadAloudRoleModelId = "aiReadAloudRoleModelId"
     const val aiReadAloudRoleBackupModelId = "aiReadAloudRoleBackupModelId"
     const val aiReadAloudRoleFirstResponseTimeoutSeconds = "aiReadAloudRoleFirstResponseTimeoutSeconds"
+    const val aiReadAloudAudioModelId = "aiReadAloudAudioModelId"
+    const val aiReadAloudAudioBackupModelId = "aiReadAloudAudioBackupModelId"
     const val aiMcpServerList = "aiMcpServerList"
     const val aiChatSessionList = "aiChatSessionList"
     const val aiReadHistoryList = "aiReadHistoryList"

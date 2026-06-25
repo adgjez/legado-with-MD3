@@ -570,6 +570,22 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val aiReadAloudRoleFirstResponseTimeoutMillis: Long
         get() = aiReadAloudRoleFirstResponseTimeoutSeconds * 1000L
 
+    var aiReadAloudAudioModelId: String?
+        get() = optionalSceneAiModelId(PreferKey.aiReadAloudAudioModelId)
+        set(value) = setOptionalSceneAiModelId(PreferKey.aiReadAloudAudioModelId, value)
+
+    val aiReadAloudAudioModelConfig: AiModelConfig?
+        get() = aiModelConfigList.firstOrNull { it.id == aiReadAloudAudioModelId }
+            ?: aiReadAloudRoleModelConfig
+
+    var aiReadAloudAudioBackupModelId: String?
+        get() = optionalSceneAiModelId(PreferKey.aiReadAloudAudioBackupModelId)
+        set(value) = setOptionalSceneAiModelId(PreferKey.aiReadAloudAudioBackupModelId, value)
+
+    val aiReadAloudAudioBackupModelConfig: AiModelConfig?
+        get() = aiModelConfigList.firstOrNull { it.id == aiReadAloudAudioBackupModelId }
+            ?: aiReadAloudRoleBackupModelConfig
+
     fun aiProviderForModel(model: AiModelConfig?): AiProviderConfig? {
         val providerId = model?.providerId ?: return null
         return aiProviderList.firstOrNull { it.id == providerId }
@@ -1920,7 +1936,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             PreferKey.aiAskModelId,
             PreferKey.aiSummaryModelId,
             PreferKey.aiReadAloudRoleModelId,
-            PreferKey.aiReadAloudRoleBackupModelId
+            PreferKey.aiReadAloudRoleBackupModelId,
+            PreferKey.aiReadAloudAudioModelId,
+            PreferKey.aiReadAloudAudioBackupModelId
         )
         val validModelIds = models.mapTo(hashSetOf()) { it.id }
         val providerId = providers.firstOrNull {

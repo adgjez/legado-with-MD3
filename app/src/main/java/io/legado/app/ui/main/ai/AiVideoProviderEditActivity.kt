@@ -25,8 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -336,7 +336,7 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
                                     .clickable { showAdvanced = !showAdvanced },
                                 shape = RoundedCornerShape(style.actionRadius),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = palette.fieldSurface.copy(alpha = 0.5f)
+                                    containerColor = palette.surfaceVariant.copy(alpha = 0.5f)
                                 )
                             ) {
                                 Row(
@@ -353,8 +353,8 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
                                         color = palette.primaryText
                                     )
                                     Icon(
-                                        imageVector = if (showAdvanced) Icons.Filled.ExpandLess
-                                            else Icons.Filled.ExpandMore,
+                                        imageVector = if (showAdvanced) Icons.Filled.KeyboardArrowUp
+                                            else Icons.Filled.KeyboardArrowDown,
                                         contentDescription = null,
                                         tint = palette.secondaryText
                                     )
@@ -504,7 +504,7 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
         modifier: Modifier = Modifier
     ) {
         val style = rememberAppDialogStyle()
-        val borderColor = if (selected) palette.accent else palette.stroke
+        val borderColor = if (selected) palette.accent else style.stroke
         val bgColor = if (selected) palette.accent.copy(alpha = 0.08f) else Color.Transparent
 
         Surface(
@@ -635,6 +635,7 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun OutlinedDropdownField(
         value: String,
@@ -669,7 +670,7 @@ class AiVideoProviderEditActivity : BaseActivity<ActivityAiVideoGalleryBinding>(
                     {
                         IconButton(onClick = { expanded = !expanded }) {
                             Icon(
-                                if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                                 contentDescription = null
                             )
                         }

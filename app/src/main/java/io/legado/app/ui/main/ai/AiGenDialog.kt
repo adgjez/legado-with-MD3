@@ -382,8 +382,7 @@ private fun ImageGenTab(
                         onGenerateImage(fullPrompt, negativePrompt, size, null, initialInputImageId)
                     }
                 },
-                primary = true,
-                enabled = generateEnabled
+                primary = true
             )
         }
     }
@@ -664,8 +663,7 @@ private fun VideoGenTab(
                         onGenerateVideo(prompt, negativePrompt, duration, aspectRatio, null, initialInputImageId, initialTailImageId)
                     }
                 },
-                primary = true,
-                enabled = generateEnabled
+                primary = true
             )
         }
     }

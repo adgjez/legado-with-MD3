@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1893,7 +1894,7 @@ private fun AiImagePickerDialog(
                                         factory = { ctx ->
                                             ImageView(ctx).apply {
                                                 scaleType = ImageView.ScaleType.CENTER_CROP
-                                                ImageLoader.loadImage(ctx, image.localPath, this)
+                                                ImageLoader.load(ctx, image.localPath).into(this)
                                             }
                                         },
                                         modifier = Modifier.fillMaxSize()
