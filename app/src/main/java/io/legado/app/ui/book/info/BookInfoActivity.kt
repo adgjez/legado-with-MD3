@@ -1341,7 +1341,19 @@ class BookInfoActivity :
         } else {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         }
-        view.measure(widthSpec, heightSpec)
+        if (view.isAttachedToWindow) {
+            view.measure(widthSpec, heightSpec)
+        } else {
+            // ComposeView needs to be attached to a window for windowRecomposer.
+            // Temporarily add to content view for measurement, then remove.
+            val originalParent = view.parent as? ViewGroup
+            originalParent?.removeView(view)
+            val content = findViewById<ViewGroup>(android.R.id.content)
+            content.addView(view, ViewGroup.LayoutParams(0, 0))
+            view.measure(widthSpec, heightSpec)
+            content.removeView(view)
+            originalParent?.addView(view)
+        }
         return if (targetHeight > 0) targetHeight else view.measuredHeight.coerceAtLeast(1)
     }
 
