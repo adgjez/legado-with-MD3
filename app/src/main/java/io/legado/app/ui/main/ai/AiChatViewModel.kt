@@ -30,6 +30,7 @@ class AiChatViewModel : ViewModel() {
 
     val messagesLiveData = MutableLiveData<List<AiChatMessage>>(emptyList())
     val requestingLiveData = MutableLiveData(false)
+    val genProgressLiveData = MutableLiveData<GenProgress?>(null)
     var isRequesting = false
         private set
 

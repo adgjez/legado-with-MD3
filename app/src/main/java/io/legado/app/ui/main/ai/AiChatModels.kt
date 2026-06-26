@@ -51,3 +51,12 @@ class AiChatException(
     val debugLog: String,
     cause: Throwable? = null
 ) : IllegalStateException(message, cause)
+
+@Keep
+data class GenProgress(
+    val type: String, // "image" or "video"
+    val prompt: String,
+    val status: String, // "generating", "completed", "failed"
+    val message: String = "",
+    val progress: Int = 0
+)

@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.ai
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -21,6 +22,7 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.ItemAiGeneratedImageBinding
 import io.legado.app.help.ai.AiImageGalleryManager
 import io.legado.app.help.ai.AiImageGalleryManager.GalleryFilter
+import io.legado.app.help.ai.AiVideoGalleryManager
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
@@ -134,6 +136,11 @@ class AiImageGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
             currentFilter = GalleryFilter.SOURCE_TYPE(AiImageGalleryManager.SOURCE_TYPE_CHARACTER_AVATAR)
             reload()
         }
+        addFilterChip("角色视频") {
+            startActivity(Intent(this@AiImageGalleryActivity, AiVideoGalleryActivity::class.java).apply {
+                putExtra("sourceType", AiVideoGalleryManager.SOURCE_TYPE_CHARACTER_AVATAR)
+            })
+        }
         groups.forEach { group ->
             addFilterChip(group.name, currentFilter == GalleryFilter.GROUP(group.id)) {
                 currentFilter = GalleryFilter.GROUP(group.id)
@@ -142,7 +149,7 @@ class AiImageGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
         }
     }
 
-    private fun addFilterChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    private fun addFilterChip(text: String, selected: Boolean = false, onClick: () -> Unit) {
         val chip = TextView(this).apply {
             this.text = text
             minHeight = 34.dpToPx()

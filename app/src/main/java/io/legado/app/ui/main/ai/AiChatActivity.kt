@@ -139,8 +139,7 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     onDeleteSession = ::confirmDeleteHistorySession,
                     onCompanionLongPress = ::showCompanionActions,
                     onOpenImageGen = { showGenDialog(0) },
-                    onOpenVideoGen = { showGenDialog(1) },
-                    onOpenScriptGen = { scriptGenDialogVisible = true },
+                    onOpenScriptGen = { showScriptGenDialog() },
                     onImageToVideo = { imageId -> showGenDialog(1, imageId) }
                 )
             )
@@ -261,12 +260,16 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
         referenceImageId: String?
     ) {
         genDialogVisible = false
+        viewModel.genProgressLiveData.postValue(GenProgress("image", prompt, "generating", "正在生成图片..."))
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val provider = if (providerId != null) AiImageService.providerByIdOrNull(providerId)
                 else AiImageService.currentProviderOrNull()
                 if (provider == null) {
-                    withContext(Dispatchers.Main) { toastOnUi("未配置图片模型") }
+                    withContext(Dispatchers.Main) {
+                        viewModel.genProgressLiveData.postValue(GenProgress("image", prompt, "failed", "未配置图片模型"))
+                        toastOnUi("未配置图片模型")
+                    }
                     return@launch
                 }
                 val image = AiImageService.generateAndStore(
@@ -278,11 +281,20 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     )
                 )
                 withContext(Dispatchers.Main) {
-                    toastOnUi("图片已生成")
+                    viewModel.genProgressLiveData.postValue(GenProgress("image", prompt, "completed", "图片已生成"))
+                    viewModel.append(AiChatMessage(
+                        role = AiChatMessage.Role.ASSISTANT,
+                        content = "已生成图片: $prompt",
+                        kind = AiChatMessage.Kind.STATUS,
+                        statusName = "图片生成",
+                        statusSuccess = true,
+                        statusLabel = "已完成"
+                    ))
                     refreshToken.intValue += 1
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    viewModel.genProgressLiveData.postValue(GenProgress("image", prompt, "failed", e.localizedMessage ?: "失败"))
                     toastOnUi("图片生成失败: ${e.localizedMessage ?: e.javaClass.simpleName}")
                 }
             }
@@ -299,12 +311,16 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
         tailImageId: String?
     ) {
         genDialogVisible = false
+        viewModel.genProgressLiveData.postValue(GenProgress("video", prompt, "generating", "正在生成视频..."))
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val provider = if (providerId != null) AiVideoService.providerByIdOrNull(providerId)
                 else AiVideoService.currentProviderOrNull()
                 if (provider == null) {
-                    withContext(Dispatchers.Main) { toastOnUi("未配置视频模型") }
+                    withContext(Dispatchers.Main) {
+                        viewModel.genProgressLiveData.postValue(GenProgress("video", prompt, "failed", "未配置视频模型"))
+                        toastOnUi("未配置视频模型")
+                    }
                     return@launch
                 }
                 val video = AiVideoService.generateAndStore(
@@ -319,11 +335,20 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     )
                 )
                 withContext(Dispatchers.Main) {
-                    toastOnUi("视频已生成")
+                    viewModel.genProgressLiveData.postValue(GenProgress("video", prompt, "completed", "视频已生成"))
+                    viewModel.append(AiChatMessage(
+                        role = AiChatMessage.Role.ASSISTANT,
+                        content = "已生成视频: $prompt",
+                        kind = AiChatMessage.Kind.STATUS,
+                        statusName = "视频生成",
+                        statusSuccess = true,
+                        statusLabel = "已完成"
+                    ))
                     refreshToken.intValue += 1
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    viewModel.genProgressLiveData.postValue(GenProgress("video", prompt, "failed", e.localizedMessage ?: "失败"))
                     toastOnUi("视频生成失败: ${e.localizedMessage ?: e.javaClass.simpleName}")
                 }
             }

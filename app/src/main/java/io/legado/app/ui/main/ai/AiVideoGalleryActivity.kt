@@ -77,6 +77,7 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
     companion object {
         const val EXTRA_BOOK_KEY = "bookKey"
         const val EXTRA_TITLE = "title"
+        const val EXTRA_SOURCE_TYPE = "sourceType"
 
         fun start(context: Context, bookKey: String? = null, title: String? = null) {
             context.startActivity(Intent(context, AiVideoGalleryActivity::class.java).apply {
@@ -89,8 +90,11 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         fixedBookKey = intent.getStringExtra(EXTRA_BOOK_KEY).orEmpty()
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        val sourceType = intent.getStringExtra(EXTRA_SOURCE_TYPE)
         if (fixedBookKey.isNotBlank()) {
             currentFilter = GalleryFilter.BOOK(fixedBookKey)
+        } else if (sourceType != null) {
+            currentFilter = GalleryFilter.SOURCE_TYPE(sourceType)
         }
         binding.titleBar.title = title.ifBlank { getString(R.string.ai_video_gallery) }
 

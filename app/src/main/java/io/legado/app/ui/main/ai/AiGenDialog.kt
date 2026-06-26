@@ -3,20 +3,23 @@ package io.legado.app.ui.main.ai
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,6 +72,7 @@ data class ImageGenPreset(
 
 // ── 主入口 ──
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AiGenDialog(
     onDismiss: () -> Unit,
@@ -150,6 +155,7 @@ fun AiGenDialog(
 
 // ── 图片生成页 ──
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ImageGenTab(
     style: AppDialogStyle,
@@ -161,17 +167,21 @@ private fun ImageGenTab(
     var prompt by remember { mutableStateOf("") }
     var negativePrompt by remember { mutableStateOf("") }
     var size by remember { mutableStateOf("1024x1024") }
+    var customSize by remember { mutableStateOf("") }
     var stylePrompt by remember { mutableStateOf("") }
     var generating by remember { mutableStateOf(false) }
     var selectedPreset by remember { mutableStateOf(-1) }
     var showAdvanced by remember { mutableStateOf(false) }
+    var mode by remember { mutableStateOf("text_to_image") }
+    var referenceImageId by remember { mutableStateOf(initialInputImageId) }
 
     val presets = remember {
         listOf(
             ImageGenPreset("高清写真", "📷", "1024x1024", "1:1", "人像/产品"),
             ImageGenPreset("横版海报", "🖼️", "1280x720", "16:9", "封面/横幅"),
             ImageGenPreset("竖版壁纸", "📱", "720x1280", "9:16", "手机壁纸"),
-            ImageGenPreset("电商主图", "🛍️", "1024x1024", "1:1", "白底产品")
+            ImageGenPreset("电商主图", "🛍️", "1024x1024", "1:1", "白底产品"),
+            ImageGenPreset("自定义", "✏️", "1024x1024", "自定义", "手动输入")
         )
     }
 
@@ -186,31 +196,110 @@ private fun ImageGenTab(
         )
     }
 
+    val effectiveSize = customSize.ifBlank { size }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // 预设
-        Text("一键模板", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.height(8.dp))
+        // 模式选择
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            listOf("text_to_image" to "文生图", "image_to_image" to "图生图").forEach { (m, label) ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (mode == m) palette.accent else style.fieldSurface,
+                    contentColor = if (mode == m) Color.White else style.primaryText,
+                    modifier = Modifier.clickable { mode = m }
+                ) {
+                    Text(
+                        label,
+                        fontSize = 12.sp,
+                        fontWeight = if (mode == m) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 图生图：参考图提示
+        if (mode == "image_to_image") {
+            if (referenceImageId != null) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = palette.accent.copy(alpha = 0.1f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🖼️", fontSize = 14.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "已关联参考图，生成将基于此图风格",
+                            fontSize = 12.sp,
+                            color = palette.accent
+                        )
+                    }
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = style.fieldSurface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { /* will be handled by caller to pick image */ }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🖼️", fontSize = 14.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "点击选择参考图（可选）",
+                            fontSize = 12.sp,
+                            color = style.secondaryText
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
+        // 预设
+        Text("一键模板", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             presets.forEachIndexed { index, preset ->
+                val isCustom = preset.name == "自定义"
                 PresetChip(
                     name = preset.name,
                     icon = preset.icon,
-                    subtitle = preset.description,
+                    subtitle = if (isCustom && customSize.isNotBlank()) customSize else preset.description,
                     selected = selectedPreset == index,
                     onClick = {
                         selectedPreset = index
-                        size = preset.size
+                        if (isCustom) {
+                            // keep custom size, don't override
+                        } else {
+                            size = preset.size
+                            customSize = ""
+                        }
                     },
                     style = style,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.width(72.dp)
                 )
             }
         }
@@ -218,7 +307,10 @@ private fun ImageGenTab(
         Spacer(modifier = Modifier.height(14.dp))
 
         // Prompt
-        Text("描述你想要生成的图片", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
+        Text(
+            if (mode == "image_to_image") "描述你想要的图片（基于参考图）" else "描述你想要生成的图片",
+            fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium
+        )
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = prompt,
@@ -240,14 +332,15 @@ private fun ImageGenTab(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 风格标签
+        // 风格标签 - FlowRow 自动换行
         Text("风格", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(4.dp))
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            styleTags.take(6).forEach { (name, tag) ->
+            styleTags.forEach { (name, tag) ->
                 val isActive = stylePrompt.contains(tag)
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -269,6 +362,58 @@ private fun ImageGenTab(
             }
         }
 
+        // 输出尺寸 - 始终可见
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("输出尺寸", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(4.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("1024x1024", "1280x720", "720x1280", "1152x864").forEach { s ->
+                val isActive = effectiveSize == s
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isActive) palette.accent else style.fieldSurface,
+                    contentColor = if (isActive) Color.White else style.primaryText,
+                    modifier = Modifier.clickable {
+                        size = s
+                        customSize = ""
+                    }
+                ) {
+                    Text(
+                        s.replace("x", " × "),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        // 自定义分辨率输入
+        OutlinedTextField(
+            value = customSize,
+            onValueChange = {
+                customSize = it
+                if (it.isNotBlank()) selectedPreset = presets.indexOfFirst { p -> p.name == "自定义" }
+            },
+            placeholder = { Text("自定义分辨率，如 800x600", fontSize = 12.sp, color = style.secondaryText.copy(alpha = 0.5f)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = style.accent,
+                unfocusedBorderColor = style.stroke,
+                focusedTextColor = style.primaryText,
+                unfocusedTextColor = style.primaryText,
+                focusedContainerColor = style.fieldSurface,
+                unfocusedContainerColor = style.fieldSurface,
+                cursorColor = style.accent
+            )
+        )
+
         // 高级参数
         Spacer(modifier = Modifier.height(12.dp))
         Row(
@@ -306,61 +451,14 @@ private fun ImageGenTab(
                         cursorColor = style.accent
                     )
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 尺寸选择
-                Text("输出尺寸", fontSize = 13.sp, color = style.secondaryText)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("1024x1024", "1280x720", "720x1280", "1152x864").forEach { s ->
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (size == s) palette.accent else style.fieldSurface,
-                            contentColor = if (size == s) Color.White else style.primaryText,
-                            modifier = Modifier.clickable { size = s }
-                        ) {
-                            Text(
-                                s.replace("x", " × "),
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 如果有关联图片提示
-        if (initialInputImageId != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = palette.accent.copy(alpha = 0.1f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("🖼️", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        "已关联参考图，生成将基于此图风格",
-                        fontSize = 12.sp,
-                        color = palette.accent
-                    )
-                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // 按钮
-        val generateEnabled = prompt.isNotBlank() && !generating
+        val generateEnabled = prompt.isNotBlank() && !generating &&
+            (mode == "text_to_image" || referenceImageId != null || prompt.isNotBlank())
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
@@ -379,7 +477,7 @@ private fun ImageGenTab(
                     if (generateEnabled) {
                         generating = true
                         val fullPrompt = if (stylePrompt.isNotBlank()) "$prompt, $stylePrompt" else prompt
-                        onGenerateImage(fullPrompt, negativePrompt, size, null, initialInputImageId)
+                        onGenerateImage(fullPrompt, negativePrompt, effectiveSize, null, referenceImageId)
                     }
                 },
                 primary = true
@@ -390,6 +488,7 @@ private fun ImageGenTab(
 
 // ── 视频生成页 ──
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun VideoGenTab(
     style: AppDialogStyle,
@@ -401,19 +500,28 @@ private fun VideoGenTab(
     val palette = style.toMiuixPalette()
     var prompt by remember { mutableStateOf("") }
     var negativePrompt by remember { mutableStateOf("") }
-    var duration by remember { mutableStateOf(3_000L) }
+    var duration by remember { mutableStateOf(5_000L) }
     var aspectRatio by remember { mutableStateOf("16:9") }
     var showAdvanced by remember { mutableStateOf(false) }
     var selectedPreset by remember { mutableStateOf(-1) }
     var generating by remember { mutableStateOf(false) }
-    var mode by remember { mutableStateOf("text_to_video") }
+    var mode by remember { mutableStateOf(
+        when {
+            initialTailImageId != null -> "keyframes"
+            initialInputImageId != null -> "image_to_video"
+            else -> "text_to_video"
+        }
+    ) }
+    var inputImageId by remember { mutableStateOf(initialInputImageId) }
+    var tailImageId by remember { mutableStateOf(initialTailImageId) }
 
     val presets = remember {
         listOf(
             GenPreset("快速短片", "🎬", 3_000L, "16:9", "3秒 16:9"),
             GenPreset("循环壁纸", "🎨", 5_000L, "9:16", "5秒 9:16"),
             GenPreset("分镜故事", "📖", 5_000L, "16:9", "5秒 16:9"),
-            GenPreset("动态海报", "🖼️", 3_000L, "1:1", "3秒 1:1")
+            GenPreset("动态海报", "🖼️", 3_000L, "1:1", "3秒 1:1"),
+            GenPreset("长视频", "🎥", 18_000L, "16:9", "18秒 16:9")
         )
     }
 
@@ -435,48 +543,100 @@ private fun VideoGenTab(
             .verticalScroll(rememberScrollState())
     ) {
         // 模式选择
-        if (initialTailImageId != null) {
-            mode = "keyframes"
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = palette.accent.copy(alpha = 0.1f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                "text_to_video" to "文生视频",
+                "image_to_video" to "图生视频",
+                "keyframes" to "关键帧"
+            ).forEach { (m, label) ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (mode == m) palette.accent else style.fieldSurface,
+                    contentColor = if (mode == m) Color.White else style.primaryText,
+                    modifier = Modifier.clickable { mode = m }
                 ) {
-                    Text("🎞️", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("关键帧动画模式：首尾帧驱动", fontSize = 12.sp, color = palette.accent, fontWeight = FontWeight.Medium)
+                    Text(
+                        label,
+                        fontSize = 12.sp,
+                        fontWeight = if (mode == m) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-        } else if (initialInputImageId != null) {
-            mode = "image_to_video"
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = palette.accent.copy(alpha = 0.1f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("🖼️→🎬", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("图生视频模式：基于图片生成视频", fontSize = 12.sp, color = palette.accent, fontWeight = FontWeight.Medium)
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 模式提示
+        when (mode) {
+            "keyframes" -> {
+                if (tailImageId != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = palette.accent.copy(alpha = 0.1f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🎞️", fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("关键帧动画模式：首尾帧驱动", fontSize = 12.sp, color = palette.accent, fontWeight = FontWeight.Medium)
+                        }
+                    }
                 }
             }
+            "image_to_video" -> {
+                if (inputImageId != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = palette.accent.copy(alpha = 0.1f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🖼️→🎬", fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("图生视频模式：基于图片生成视频", fontSize = 12.sp, color = palette.accent, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = style.fieldSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { /* pick image from gallery */ }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🖼️", fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("点击选择起始图片（可选）", fontSize = 12.sp, color = style.secondaryText)
+                        }
+                    }
+                }
+            }
+        }
+        if (mode != "text_to_video") {
             Spacer(modifier = Modifier.height(10.dp))
         }
 
         // 预设
         Text("一键模板", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(8.dp))
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             presets.forEachIndexed { index, preset ->
                 PresetChip(
@@ -490,7 +650,7 @@ private fun VideoGenTab(
                         aspectRatio = preset.aspectRatio
                     },
                     style = style,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.width(72.dp)
                 )
             }
         }
@@ -508,7 +668,7 @@ private fun VideoGenTab(
                     when (mode) {
                         "keyframes" -> "描述两个关键帧之间的过渡动画..."
                         "image_to_video" -> "描述图片中应该发生的动态变化..."
-                        else -> "例：一只猫在日落海滩上散步，海浪轻轻拍打"
+                        else -> "例：一群肥羊在绿草地上悠闲地吃草"
                     },
                     color = style.secondaryText.copy(alpha = 0.5f)
                 )
@@ -529,14 +689,15 @@ private fun VideoGenTab(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 运镜风格
+        // 运镜风格 - FlowRow 自动换行
         Text("运镜风格", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(4.dp))
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            motionTags.take(6).forEach { (name, tag) ->
+            motionTags.forEach { (name, tag) ->
                 val isActive = prompt.contains(tag)
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -553,6 +714,46 @@ private fun VideoGenTab(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        // 时长 - 始终可见
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("时长: ${duration / 1000}秒", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
+        Slider(
+            value = duration.toFloat() / 1000f,
+            onValueChange = { duration = (it * 1000).toLong() },
+            valueRange = 3f..18f,
+            steps = 14,
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(
+                thumbColor = palette.accent,
+                activeTrackColor = palette.accent
+            )
+        )
+
+        // 画面比例 - 始终可见
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("画面比例", fontSize = 13.sp, color = style.secondaryText, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(4.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("16:9", "9:16", "1:1", "4:3", "3:4").forEach { ratio ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (aspectRatio == ratio) palette.accent else style.fieldSurface,
+                    contentColor = if (aspectRatio == ratio) Color.White else style.primaryText,
+                    modifier = Modifier.clickable { aspectRatio = ratio }
+                ) {
+                    Text(
+                        ratio,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -595,47 +796,6 @@ private fun VideoGenTab(
                         cursorColor = style.accent
                     )
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // 时长
-                Text("时长: ${duration / 1000}秒", fontSize = 13.sp, color = style.secondaryText)
-                Slider(
-                    value = duration.toFloat() / 1000f,
-                    onValueChange = { duration = (it * 1000).toLong() },
-                    valueRange = 3f..10f,
-                    steps = 6,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = palette.accent,
-                        activeTrackColor = palette.accent
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // 比例
-                Text("画面比例", fontSize = 13.sp, color = style.secondaryText)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("16:9", "9:16", "1:1", "4:3").forEach { ratio ->
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (aspectRatio == ratio) palette.accent else style.fieldSurface,
-                            contentColor = if (aspectRatio == ratio) Color.White else style.primaryText,
-                            modifier = Modifier.clickable { aspectRatio = ratio }
-                        ) {
-                            Text(
-                                ratio,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
             }
         }
 
@@ -660,7 +820,7 @@ private fun VideoGenTab(
                 onClick = {
                     if (generateEnabled) {
                         generating = true
-                        onGenerateVideo(prompt, negativePrompt, duration, aspectRatio, null, initialInputImageId, initialTailImageId)
+                        onGenerateVideo(prompt, negativePrompt, duration, aspectRatio, null, inputImageId, tailImageId)
                     }
                 },
                 primary = true
