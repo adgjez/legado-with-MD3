@@ -162,7 +162,7 @@ internal object AiToolExecutor {
     private const val STORY_PIPELINE_TIMEOUT_MILLIS = 1_800_000L // 30 min
 
     /**
-     * Async submit mode: for video/audio tools, submit the generation task to the
+     * Async submit mode: for video tools, submit the generation task to the
      * provider and return immediately with a task id instead of waiting for the
      * (potentially long) generation to complete. The [AiGenPoller] tracks progress.
      */

@@ -70,7 +70,7 @@ object AiSandboxBridge {
         val file = File(path)
         val canonical = file.canonicalPath
         // Only allow files within the app's ai_* directories
-        val allowedDirs = listOf("ai_images", "ai_videos", "ai_audios")
+        val allowedDirs = listOf("ai_images", "ai_videos")
         val appDir = appCtx.filesDir.canonicalPath
         return if (allowedDirs.any { canonical.startsWith("$appDir/$it/") }) file else null
     }

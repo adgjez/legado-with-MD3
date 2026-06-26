@@ -19,7 +19,7 @@ import androidx.room.PrimaryKey
 data class AiGenTask(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val modality: String, // image/video/audio/text_sanitize
+    val modality: String, // image/video/text_sanitize
     val status: String = "pending", // pending/submitted/processing/downloading/done/failed/cancelled
     val priority: Int = 0, // 0=normal, 1=high, -1=low
     val parentTaskId: Long? = null,
@@ -31,7 +31,7 @@ data class AiGenTask(
     val inputImageId: String? = null,
     val referenceImageId: String? = null,
     val remoteTaskId: String = "",
-    val resultId: String = "", // generated image/video/audio ID
+    val resultId: String = "", // generated image/video ID
     val resultPath: String = "",
     val previewUrl: String = "",
     val emotionalHint: String = "",

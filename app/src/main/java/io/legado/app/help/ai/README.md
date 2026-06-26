@@ -57,7 +57,6 @@ AI 子系统分为四层：**配置层**（AppConfig）、**服务层**（help/a
 |---|---|---|
 | `AiImageService` | `AiImageService.kt` | 图片生成。支持 OpenAI 兼容接口和 JS 脚本两种 provider，生成/批量生成/编辑/inpaint |
 | `AiVideoService` | `AiVideoService.kt` | 视频生成。异步流程：submit → poll → download，最大 200MB |
-| `AiAudioService` | `AiAudioService.kt` | 音频生成。异步流程：submit → poll → download，最大 50MB，支持 music/sfx |
 
 ### 1.5 画廊管理
 
@@ -65,7 +64,6 @@ AI 子系统分为四层：**配置层**（AppConfig）、**服务层**（help/a
 |---|---|---|
 | `AiImageGalleryManager` | `AiImageGalleryManager.kt` | 图片画廊。保存、查询、分组、临时清理 |
 | `AiVideoGalleryManager` | `AiVideoGalleryManager.kt` | 视频画廊。保存、查询、分组 |
-| `AiAudioGalleryManager` | `AiAudioGalleryManager.kt` | 音频画廊。保存、查询、分组 |
 
 ### 1.6 分镜与故事创作
 
@@ -114,7 +112,6 @@ AI 子系统分为四层：**配置层**（AppConfig）、**服务层**（help/a
 | `AiImageTool` | 2 | generate_image, generate_book_character_avatar |
 | `AiImageToolEnhanced` | 3 | generate_images, edit_image, inpaint_image |
 | `AiVideoTool` | 4 | generate_video, generate_video_from_image, extract_video_frame, continue_video_from_frame |
-| `AiAudioTool` | 2 | generate_music, generate_sound_effect |
 | `AiStoryTool` | 1 | generate_scene |
 | `AiSanitizeTool` | 1 | sanitize_text |
 | `AiReadAloudBgmTool` | 2 | list_read_aloud_bgm_catalog, assign_read_aloud_bgm_ranges |
@@ -150,10 +147,8 @@ AI 子系统分为四层：**配置层**（AppConfig）、**服务层**（help/a
 | `AiMemoryFragmentFts` | `ai_memory_fragments_fts` | FTS4 全文索引 |
 | `AiGeneratedImage` | `ai_generated_images` | prompt, localPath, bookKey, chapterIndex, characterId, favorite, groupId, generationMode |
 | `AiGeneratedVideo` | `ai_generated_videos` | prompt, localPath, thumbnailPath, duration, generationMode, inputImageId, favorite |
-| `AiGeneratedAudio` | `ai_generated_audios` | prompt, localPath, duration, format, audioType, favorite |
 | `AiImageGroup` | `ai_image_groups` | name, sortOrder |
 | `AiVideoGroup` | `ai_video_groups` | name, sortOrder |
-| `AiAudioGroup` | `ai_audio_groups` | name, sortOrder |
 | `AiStoryScene` | `ai_story_scenes` | playlistId, sceneIndex, narrativeText, visualPrompt, cameraControl, imageId, videoId, audioId, status |
 | `AiStoryPlaylist` | `ai_story_playlists` | bookKey, chapterTitle, sceneCount, totalDuration, status |
 | `AiPurifiedTextCache` | `ai_purified_text_cache` | bookKey+chapterIndex+intensity(unique), contentHash, sanitizedText |
@@ -302,7 +297,6 @@ composeView.setContent { /* ... */ }
 - `AiModelConfig` — 模型配置（id, name, apiModelName, maxTokens, temperature, reasoningEffort）
 - `AiImageProviderConfig` — 图片 Provider（id, name, baseUrl, apiKey, model, enableHd, enableInpaint）
 - `AiVideoProviderConfig` — 视频 Provider
-- `AiAudioProviderConfig` — 音频 Provider
 - `AiMcpServerConfig` — MCP 服务器（id, name, endpoint, apiKey, enabled）
 - `AiSkillConfig` — Skill 配置（id, name, providerName, filePath, enabled）
 - `AiChatCompanionConfig` — 角色助手（id, name, avatar, systemPrompt, modelId, skillIds, mcpServerIds, worldBookId）
