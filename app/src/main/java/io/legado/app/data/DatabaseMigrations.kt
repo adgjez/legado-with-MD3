@@ -37,6 +37,7 @@ object DatabaseMigrations {
             migration_118_120,
             migration_119_120,
             migration_120_121,
+            migration_121_122,
         )
     }
 
@@ -297,6 +298,17 @@ object DatabaseMigrations {
     private val migration_120_121 = object : Migration(120, 121) {
         override fun migrate(db: SupportSQLiteDatabase) {
             // No-op: columns/types identical, only index names changed in entity
+        }
+    }
+
+    /**
+     * v121 → v122: Drop AI audio generation tables (feature removed).
+     * AiGeneratedAudio, AiAudioGroup entities and DAOs have been deleted.
+     */
+    private val migration_121_122 = object : Migration(121, 122) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DROP TABLE IF EXISTS `ai_generated_audios`")
+            db.execSQL("DROP TABLE IF EXISTS `ai_audio_groups`")
         }
     }
 
