@@ -167,10 +167,11 @@ object AgnesVideoTemplate : AiVideoApiTemplate {
                 val path = raw.replace("{id}", remoteTaskId).replace("{taskId}", remoteTaskId)
                 "$clean/${path.trimStart('/')}"
             }
-            // 使用 Agnes 专用接口
+            // 使用 Agnes 专用接口: agnesapi 在根路径，不在 /v1/ 下
             else -> {
                 val model = provider.model.trim().ifBlank { "agnes-video-v2.0" }
-                "$clean/agnesapi?video_id=${remoteTaskId.trim()}&model_name=$model"
+                val origin = extractOrigin(clean)
+                "$origin/agnesapi?video_id=${remoteTaskId.trim()}&model_name=$model"
             }
         }
     }
@@ -196,6 +197,8 @@ object AgnesVideoTemplate : AiVideoApiTemplate {
 
         // 帧数: 遵循 8n+1 规则，默认 121 (5秒 @24fps)
         val numFrames = extraParams.optInt("num_frames", 121)
+            .coerceAtMost(441)
+            .let { if ((it - 1) % 8 != 0) ((it - 1) / 8 + 1) * 8 + 1 else it }
             .coerceAtMost(441)
         put("num_frames", numFrames)
 
@@ -276,6 +279,17 @@ object AgnesVideoTemplate : AiVideoApiTemplate {
 }
 
 // ── 共享辅助 ──
+
+/** 从 URL 中提取 origin (scheme + host + port)，用于根路径端点 (如 agnesapi) */
+private fun extractOrigin(url: String): String {
+    return try {
+        val uri = java.net.URI(url)
+        val port = if (uri.port > 0 && uri.port != 80 && uri.port != 443) ":${uri.port}" else ""
+        "${uri.scheme}://${uri.host}$port"
+    } catch (_: Exception) {
+        url.substringBefore("/v1").trimEnd('/')
+    }
+}
 
 private val VIDEO_URL_KEYS = listOf(
     "url", "video_url", "download_url", "output_url", "result", "video",
