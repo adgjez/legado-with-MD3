@@ -14,7 +14,6 @@ internal object AiToolExecutor {
     private const val DEFAULT_TOOL_TIMEOUT_MILLIS = 120_000L
     private const val IMAGE_TOOL_TIMEOUT_MILLIS = 300_000L
     private const val VIDEO_TOOL_TIMEOUT_MILLIS = 600_000L
-    private const val AUDIO_TOOL_TIMEOUT_MILLIS = 300_000L
     private const val SANITIZE_TOOL_TIMEOUT_MILLIS = 120_000L
     private const val NETWORK_ABORT_RETRY_COUNT = 1
 

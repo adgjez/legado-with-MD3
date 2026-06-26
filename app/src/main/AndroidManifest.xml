@@ -326,10 +326,6 @@
             android:launchMode="standard"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
-            android:name=".ui.main.ai.AiAudioProviderEditActivity"
-            android:launchMode="standard"
-            android:windowSoftInputMode="adjustResize|stateHidden" />
-        <activity
             android:name=".ui.config.AiWorldBookManageActivity"
             android:launchMode="standard"
             android:windowSoftInputMode="adjustResize|stateHidden" />

@@ -7,7 +7,6 @@ object AiPromptRewriter {
     enum class Modality(val key: String) {
         IMAGE("image"),
         VIDEO("video"),
-        AUDIO("audio"),
         STORY("story"),
         TEXT_SANITIZE("text_sanitize")
     }
@@ -36,7 +35,6 @@ object AiPromptRewriter {
         val base = when (modality) {
             Modality.VIDEO -> "正在编织光影..."
             Modality.IMAGE -> "正在描绘画面..."
-            Modality.AUDIO -> "正在谱写旋律..."
             Modality.STORY -> "正在编排分镜..."
             Modality.TEXT_SANITIZE -> "正在净化文本..."
         }
@@ -51,7 +49,7 @@ object AiPromptRewriter {
     }
 
     /**
-     * Convenience overload accepting a raw modality key (e.g. "video", "audio")
+     * Convenience overload accepting a raw modality key (e.g. "video", "image")
      * as stored on [io.legado.app.data.entities.AiGenTask]. Unknown keys fall
      * back to [Modality.IMAGE].
      */
@@ -94,14 +92,6 @@ object AiPromptRewriter {
 3. 添加物理规则后缀确保画面稳定
 4. 保持原意，不添加用户未提及的内容
 5. 只输出优化后的提示词
-            """.trimIndent()
-            Modality.AUDIO -> """
-你是一个专业的 AI 音频生成提示词优化专家。请将用户的描述优化为适合 AI 音乐/音效生成的英文提示词。
-要求：
-1. 输出纯英文描述
-2. 包含音乐风格、乐器、节奏、情绪等细节
-3. 如有指定，包含 BPM、调性等技术参数
-4. 只输出优化后的描述
             """.trimIndent()
             Modality.STORY -> """
 你是一个专业的影视分镜提示词优化专家。请将用户的描述优化为适合 AI 视频分镜的英文视觉提示词。
