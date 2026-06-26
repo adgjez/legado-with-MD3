@@ -699,7 +699,6 @@
     <string name="ai_video_generate">生视频</string>
     <string name="ai_unified_gallery">AI 创作库</string>
     <string name="ai_video_provider_edit">视频服务商设置</string>
-    <string name="ai_audio_provider_edit">音频服务商设置</string>
     <string name="ai_story_generate">把本章做成视频</string>
     <string name="ai_book_creation">本作AI二创集</string>
     <string name="ai_image_rename">重命名</string>

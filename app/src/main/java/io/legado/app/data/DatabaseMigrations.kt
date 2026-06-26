@@ -194,55 +194,7 @@ object DatabaseMigrations {
 
     private val migration_112_113 = object : Migration(112, 113) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
-                """
-                CREATE TABLE IF NOT EXISTS `ai_generated_audios` (
-                    `id` TEXT NOT NULL PRIMARY KEY,
-                    `name` TEXT NOT NULL DEFAULT '',
-                    `prompt` TEXT NOT NULL DEFAULT '',
-                    `providerId` TEXT NOT NULL DEFAULT '',
-                    `providerName` TEXT NOT NULL DEFAULT '',
-                    `model` TEXT NOT NULL DEFAULT '',
-                    `localPath` TEXT NOT NULL DEFAULT '',
-                    `duration` INTEGER NOT NULL DEFAULT 0,
-                    `format` TEXT NOT NULL DEFAULT 'mp3',
-                    `audioType` TEXT NOT NULL DEFAULT 'music',
-                    `inputText` TEXT NOT NULL DEFAULT '',
-                    `costActual` REAL NOT NULL DEFAULT 0,
-                    `bookKey` TEXT NOT NULL DEFAULT '',
-                    `bookName` TEXT NOT NULL DEFAULT '',
-                    `bookAuthor` TEXT NOT NULL DEFAULT '',
-                    `chapterKey` TEXT NOT NULL DEFAULT '',
-                    `chapterIndex` INTEGER NOT NULL DEFAULT -1,
-                    `chapterTitle` TEXT NOT NULL DEFAULT '',
-                    `sourceType` TEXT NOT NULL DEFAULT '',
-                    `remoteTaskId` TEXT NOT NULL DEFAULT '',
-                    `favorite` INTEGER NOT NULL DEFAULT 0,
-                    `groupId` TEXT DEFAULT NULL,
-                    `createdAt` INTEGER NOT NULL DEFAULT 0,
-                    `updatedAt` INTEGER NOT NULL DEFAULT 0,
-                    `lastAccessTime` INTEGER NOT NULL DEFAULT 0
-                )
-                """.trimIndent()
-            )
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_groupId` ON `ai_generated_audios` (`groupId`)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_favorite` ON `ai_generated_audios` (`favorite`)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_createdAt` ON `ai_generated_audios` (`createdAt`)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_bookKey` ON `ai_generated_audios` (`bookKey`)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_generated_audios_audioType` ON `ai_generated_audios` (`audioType`)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_audio_book_chapter` ON `ai_generated_audios` (`bookKey`, `chapterIndex`)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS `idx_audio_lru` ON `ai_generated_audios` (`favorite`, `lastAccessTime`)")
-
-            db.execSQL(
-                """
-                CREATE TABLE IF NOT EXISTS `ai_audio_groups` (
-                    `id` TEXT NOT NULL PRIMARY KEY,
-                    `name` TEXT NOT NULL DEFAULT '',
-                    `createdAt` INTEGER NOT NULL DEFAULT 0,
-                    `sortOrder` INTEGER NOT NULL DEFAULT 0
-                )
-                """.trimIndent()
-            )
+            // Audio generation tables removed in v122 — no-op migration
         }
     }
 

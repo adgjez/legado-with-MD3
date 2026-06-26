@@ -62,8 +62,6 @@ object AiToolRegistry {
         "generate_images",
         "edit_image",
         "inpaint_image",
-        "generate_music",
-        "generate_sound_effect",
         "generate_book_cover",
         "generate_scene_illustration",
         "generate_character_portrait"
@@ -186,9 +184,7 @@ object AiToolRegistry {
         "generate_scene",
         "generate_images",
         "edit_image",
-        "inpaint_image",
-        "generate_music",
-        "generate_sound_effect"
+        "inpaint_image"
     )
 
     private val nativeToolLabels = mapOf(
@@ -255,8 +251,6 @@ object AiToolRegistry {
         "generate_images" to "批量生图",
         "edit_image" to "图片编辑",
         "inpaint_image" to "局部重绘",
-        "generate_music" to "生成音乐",
-        "generate_sound_effect" to "生成音效",
         "generate_book_cover" to "生成书籍封面",
         "generate_scene_illustration" to "生成场景插画",
         "generate_character_portrait" to "生成角色立绘"
