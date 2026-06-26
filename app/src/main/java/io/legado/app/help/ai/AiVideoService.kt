@@ -382,13 +382,18 @@ object AiVideoService {
             val startedAt = System.currentTimeMillis()
             var responseStatus = ""
             try {
+                // Only send provider auth headers when downloading from the provider's own domain.
+                // External CDN/storage URLs (e.g. Google Cloud Storage) don't accept the provider's API key.
+                val isExternalUrl = !url.startsWith(provider.baseUrl.trimEnd('/'), true)
                 provider.httpClient().newCallResponse {
                     url(url)
                     addHeader("Accept", "application/octet-stream, */*")
-                    provider.apiKey.takeIf { it.isNotBlank() }?.let {
-                        addHeader("Authorization", "Bearer $it")
+                    if (!isExternalUrl) {
+                        provider.apiKey.takeIf { it.isNotBlank() }?.let {
+                            addHeader("Authorization", "Bearer $it")
+                        }
+                        addHeaders(AiChatService.parseCustomHeaders(provider.headers))
                     }
-                    addHeaders(AiChatService.parseCustomHeaders(provider.headers))
                 }.use { response ->
                     responseStatus = "${response.code} ${response.message}"
                     if (!response.isSuccessful) {
