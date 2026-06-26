@@ -5,15 +5,18 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.addCallback
-import androidx.core.net.toUri
-import com.shuyu.gsyvideoplayer.GSYVideoManager
-import com.shuyu.gsyvideoplayer.listener.GSYSampleCallBack
-import com.shuyu.gsyvideoplayer.utils.OrientationUtils
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import io.legado.app.base.BaseActivity
 import io.legado.app.databinding.ActivityAiVideoPlayerBinding
-import io.legado.app.help.gsyVideo.VideoPlayer
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import java.io.File
 
@@ -21,8 +24,9 @@ class AiVideoPlayerActivity : BaseActivity<ActivityAiVideoPlayerBinding>() {
 
     override val binding by viewBinding(ActivityAiVideoPlayerBinding::inflate)
 
-    private var orientationUtils: OrientationUtils? = null
+    private var player: ExoPlayer? = null
     private var videoPath: String = ""
+    private var isFullScreen = false
 
     companion object {
         const val EXTRA_VIDEO_PATH = "videoPath"
@@ -45,58 +49,98 @@ class AiVideoPlayerActivity : BaseActivity<ActivityAiVideoPlayerBinding>() {
             return
         }
 
-        initVideoPlayer(videoPath)
+        title = videoName.ifBlank { File(videoPath).name }
+
+        initPlayer()
+        initFullScreenToggle()
 
         onBackPressedDispatcher.addCallback(this) {
-            if (orientationUtils != null) {
-                orientationUtils?.backToProtVideo()
+            if (isFullScreen) {
+                exitFullScreen()
+            } else {
+                finish()
             }
-            finish()
         }
     }
 
-    private fun initVideoPlayer(path: String) {
-        val player = binding.videoPlayer
+    private fun initPlayer() {
+        player = ExoPlayer.Builder(this).build().also { exoPlayer ->
+            binding.playerView.player = exoPlayer
+            val mediaItem = MediaItem.fromUri(File(videoPath).toURI().toString())
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
+            exoPlayer.playWhenReady = true
 
-        orientationUtils = OrientationUtils(this, player).apply {
-            isEnable = true
+            exoPlayer.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_ENDED) {
+                        exoPlayer.seekTo(0)
+                        exoPlayer.playWhenReady = false
+                    }
+                }
+            })
         }
+    }
 
-        player.setUp(path, true, File(path).name)
+    private fun initFullScreenToggle() {
+        binding.playerView.setFullscreenButtonClickListener { toggleFullScreen() }
+    }
 
-        player.setVideoAllCallBack(object : GSYSampleCallBack() {
-            override fun onPrepared(url: String?, vararg objects: Any?) {
-                super.onPrepared(url, *objects)
-                orientationUtils?.isEnable = true
-            }
+    private fun toggleFullScreen() {
+        if (isFullScreen) {
+            exitFullScreen()
+        } else {
+            enterFullScreen()
+        }
+    }
 
-            override fun onQuitFullscreen(url: String?, vararg objects: Any?) {
-                super.onQuitFullscreen(url, *objects)
-                orientationUtils?.backToProtVideo()
-            }
-        })
+    private fun enterFullScreen() {
+        isFullScreen = true
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        hideSystemBars()
+        binding.playerView.useController = true
+    }
 
-        player.startPlayLogic()
+    private fun exitFullScreen() {
+        isFullScreen = false
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        showSystemBars()
+        binding.playerView.useController = true
+    }
+
+    private fun hideSystemBars() {
+        WindowCompat.getInsetsController(window, binding.playerView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun showSystemBars() {
+        WindowCompat.getInsetsController(window, binding.playerView).apply {
+            show(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        binding.videoPlayer.onVideoPause()
+        player?.playWhenReady = false
     }
 
     override fun onResume() {
         super.onResume()
-        binding.videoPlayer.onVideoResume()
+        player?.playWhenReady = true
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        orientationUtils?.releaseListener()
-        GSYVideoManager.releaseAllVideos()
+        player?.release()
+        player = null
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        orientationUtils?.setEnable(false)
+        // PlayerView handles resize automatically
     }
 }
