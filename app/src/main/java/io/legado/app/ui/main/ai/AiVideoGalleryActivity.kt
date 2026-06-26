@@ -401,16 +401,7 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
                 neutralButton("播放") {
                     val file = AiVideoGalleryManager.resolveVideoFile(AiVideoGalleryManager.videoUri(video.id))
                     if (file != null) {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            val uri = FileProvider.getUriForFile(
-                                this@AiVideoGalleryActivity,
-                                "${packageName}.fileProvider",
-                                file
-                            )
-                            setDataAndType(uri, "video/*")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        startActivity(intent)
+                        AiVideoPlayerActivity.start(this@AiVideoGalleryActivity, file.absolutePath, video.name)
                     } else {
                         toastOnUi("视频文件不存在")
                     }

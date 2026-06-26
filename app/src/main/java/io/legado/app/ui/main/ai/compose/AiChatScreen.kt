@@ -110,6 +110,7 @@ import io.legado.app.ui.main.ai.AiChatSession
 import io.legado.app.ui.main.ai.AiChatSpeechPlayer
 import io.legado.app.ui.main.ai.AiChatViewModel
 import io.legado.app.ui.main.ai.GenProgress
+import io.legado.app.ui.main.ai.AiVideoPlayerActivity
 import io.legado.app.ui.book.character.compose.CharacterAvatar
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -1426,6 +1427,7 @@ private fun AiAssistantMessageRow(
                         is AiMessagePartUi.ProcessChain -> AiProcessPart(part, style, onToolPreview, onProcessExpanded)
                         is AiMessagePartUi.SearchBooks -> AiSearchBookInlinePart(part, style, onToolPreview)
                         is AiMessagePartUi.Images -> AiImageInlinePart(part, style, onToolPreview, onImageToVideo)
+                        is AiMessagePartUi.Video -> AiVideoInlinePart(part, style)
                     }
                 }
             }
@@ -1675,6 +1677,73 @@ private fun AiImageInlinePart(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiVideoInlinePart(
+    part: AiMessagePartUi.Video,
+    style: AiComposeStyle
+) {
+    val context = LocalContext.current
+    val file = remember(part.videoPath) { java.io.File(part.videoPath) }
+    val exists = remember(part.videoPath) { file.exists() }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = style.colors.surface.copy(alpha = 0.8f),
+        tonalElevation = 2.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = exists) {
+                if (exists) {
+                    AiVideoPlayerActivity.start(context, part.videoPath, part.prompt)
+                }
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 播放按钮图标
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = style.colors.accent,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        "▶",
+                        color = Color.White,
+                        fontSize = 18.sp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "视频已生成",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = style.colors.primaryText
+                )
+                if (part.prompt.isNotBlank()) {
+                    Text(
+                        part.prompt,
+                        fontSize = 11.sp,
+                        color = style.colors.secondaryText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    if (exists) "点击播放" else "文件已删除",
+                    fontSize = 11.sp,
+                    color = if (exists) style.colors.accent else style.colors.error,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

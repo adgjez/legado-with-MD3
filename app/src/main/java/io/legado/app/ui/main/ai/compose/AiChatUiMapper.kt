@@ -52,6 +52,13 @@ sealed class AiMessagePartUi {
         override val id: String,
         val images: List<AiImageResultUi>
     ) : AiMessagePartUi()
+
+    @Immutable
+    data class Video(
+        override val id: String,
+        val videoPath: String,
+        val prompt: String
+    ) : AiMessagePartUi()
 }
 
 @Immutable
@@ -226,6 +233,13 @@ private fun AiChatMessage.toTextParts(): List<AiMessagePartUi> {
         parts += AiMessagePartUi.Images(
             id = "$id-images",
             images = parsed.images
+        )
+    }
+    if (videoPath != null && videoPath.isNotBlank()) {
+        parts += AiMessagePartUi.Video(
+            id = "$id-video",
+            videoPath = videoPath,
+            prompt = statusDetail ?: content
         )
     }
     return parts

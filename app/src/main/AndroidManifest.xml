@@ -319,6 +319,11 @@
             android:name=".ui.main.ai.AiVideoGalleryActivity"
             android:launchMode="standard" />
         <activity
+            android:name=".ui.main.ai.AiVideoPlayerActivity"
+            android:launchMode="standard"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <activity
             android:name=".ui.main.ai.AiUnifiedGalleryActivity"
             android:launchMode="standard" />
         <activity

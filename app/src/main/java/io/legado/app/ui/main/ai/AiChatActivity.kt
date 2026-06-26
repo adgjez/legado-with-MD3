@@ -338,11 +338,13 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
                     viewModel.genProgressLiveData.postValue(GenProgress("video", prompt, "completed", "视频已生成"))
                     viewModel.append(AiChatMessage(
                         role = AiChatMessage.Role.ASSISTANT,
-                        content = "已生成视频: $prompt",
+                        content = "已生成视频",
                         kind = AiChatMessage.Kind.STATUS,
                         statusName = "视频生成",
                         statusSuccess = true,
-                        statusLabel = "已完成"
+                        statusLabel = "已完成",
+                        statusDetail = prompt,
+                        videoPath = video.localPath
                     ))
                     refreshToken.intValue += 1
                 }
