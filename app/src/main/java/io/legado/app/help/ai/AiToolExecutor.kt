@@ -31,6 +31,8 @@ internal object AiToolExecutor {
     private val videoToolNames = setOf(
         "generate_video",
         "generate_video_from_image",
+        "generate_video_keyframes",
+        "generate_video_multi_image",
         "extract_video_frame",
         "continue_video_from_frame"
     )
@@ -68,6 +70,8 @@ internal object AiToolExecutor {
         "get_app_settings",
         "generate_video",
         "generate_video_from_image",
+        "generate_video_keyframes",
+        "generate_video_multi_image",
         "extract_video_frame",
         "continue_video_from_frame",
         "sanitize_text",

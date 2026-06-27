@@ -11,7 +11,7 @@ data class AiResolvedTool(
 
 object AiToolRegistry {
 
-    private const val TOOL_SETTINGS_VERSION = 14
+    private const val TOOL_SETTINGS_VERSION = 15
     private val version2AddedDefaultTools = setOf(
         "list_speech_catalogs",
         "assign_character_speech_route",
@@ -75,6 +75,12 @@ object AiToolRegistry {
     // v14: 恢复联网搜索工具
     private val version14AddedDefaultTools = setOf(
         "search_web_tavily"
+    )
+
+    // v15: 新增关键帧动画和多图视频工具
+    private val version15AddedDefaultTools = setOf(
+        "generate_video_keyframes",
+        "generate_video_multi_image"
     )
 
     val characterCompanionToolNames = setOf(
@@ -178,6 +184,8 @@ object AiToolRegistry {
         "set_app_settings_batch",
         "generate_video",
         "generate_video_from_image",
+        "generate_video_keyframes",
+        "generate_video_multi_image",
         "extract_video_frame",
         "continue_video_from_frame",
         "sanitize_text",
@@ -244,6 +252,8 @@ object AiToolRegistry {
         "set_app_settings_batch" to "批量修改设置",
         "generate_video" to "生成视频",
         "generate_video_from_image" to "图生视频",
+        "generate_video_keyframes" to "关键帧动画",
+        "generate_video_multi_image" to "多图视频",
         "extract_video_frame" to "提取视频帧",
         "continue_video_from_frame" to "视频接力续写",
         "sanitize_text" to "AI 文本净化",
@@ -313,6 +323,8 @@ object AiToolRegistry {
         "set_app_settings_batch" to "设置",
         "generate_video" to "AI 生视频",
         "generate_video_from_image" to "AI 生视频",
+        "generate_video_keyframes" to "AI 生视频",
+        "generate_video_multi_image" to "AI 生视频",
         "extract_video_frame" to "AI 生视频",
         "continue_video_from_frame" to "AI 生视频",
         "sanitize_text" to "AI 文本净化",
@@ -403,6 +415,7 @@ object AiToolRegistry {
                 if (AppConfig.aiEnabledToolNamesVersion < 12) addAll(version12AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 13) addAll(version13AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 14) addAll(version14AddedDefaultTools)
+                if (AppConfig.aiEnabledToolNamesVersion < 15) addAll(version15AddedDefaultTools)
             }
             val migrated = (stored.ifEmpty { defaultEnabledTools } + additions)
                 .filter { it.isNotBlank() }

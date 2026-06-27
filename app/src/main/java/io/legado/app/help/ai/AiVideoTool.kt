@@ -1,6 +1,5 @@
 package io.legado.app.help.ai
 
-import io.legado.app.ui.main.ai.AiVideoProviderConfig
 import org.json.JSONArray
 import org.json.JSONObject
 
