@@ -53,9 +53,6 @@ object AiVideoService {
     /** 抽帧缩放的最大边长，用于 OOM 保护。 */
     private const val MAX_FRAME_DIMENSION = 1024
 
-    /** 抽帧保存的图片来源类型。 */
-    private const val SOURCE_TYPE_VIDEO_FRAME = "video_frame_extract"
-
     data class VideoSubmitResult(val remoteTaskId: String, val status: String)
 
     data class VideoTaskStatus(
@@ -285,7 +282,7 @@ object AiVideoService {
             model = "frame-extract"
         )
         val metadata = AiImageGalleryManager.ImageMetadata(
-            sourceType = SOURCE_TYPE_VIDEO_FRAME,
+            sourceType = AiImageGalleryManager.SOURCE_TYPE_VIDEO_FRAME,
             sourceText = "Extracted from video $videoId"
         )
         return AiImageGalleryManager.saveGeneratedImage(imageSource, prompt, imageProvider, "frame-extract", metadata)
