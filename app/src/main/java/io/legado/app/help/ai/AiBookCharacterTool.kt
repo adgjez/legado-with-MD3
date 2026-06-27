@@ -182,6 +182,7 @@ object AiBookCharacterTool {
         put("characterId", intProp("可选，角色 ID。"))
         put("name", stringProp("可选，角色名称。"))
         put("prompt", stringProp("可选，头像生成提示词；为空时会根据角色资料自动生成。"))
+        put("size", stringProp("可选，图片尺寸，如 1024x1024, 1024x768, 1792x1024。"))
         put("providerId", stringProp("可选，指定生图提供商 ID；只有用户明确选择某个生图模型时才传入，否则留空。"))
     }
 
@@ -837,10 +838,12 @@ object AiBookCharacterTool {
         if (providerId.isNotBlank() && provider == null) {
             return errorJson("image provider is unavailable: $providerId")
         }
+        val size = args?.optString("size")?.takeIf { it.isNotBlank() }
         val image = runCatching {
             AiImageService.generateAndStore(
                 prompt,
                 provider,
+                size,
                 metadata = AiImageGalleryManager.ImageMetadata(
                     bookName = book.name,
                     bookAuthor = book.author,

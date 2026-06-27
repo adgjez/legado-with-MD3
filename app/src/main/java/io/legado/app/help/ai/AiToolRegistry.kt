@@ -94,7 +94,8 @@ object AiToolRegistry {
         "list_book_chapters",
         "search_book_chapter_content",
         "read_book_chapter_content",
-        "generate_image"
+        "generate_image",
+        "generate_image_from_image"
     )
 
     val readSafeToolNames = setOf(
@@ -105,6 +106,7 @@ object AiToolRegistry {
         "read_book_chapter_content",
         "query_read_records",
         "generate_image",
+        "generate_image_from_image",
         "list_book_characters",
         "upsert_book_character",
         "list_book_character_relations",

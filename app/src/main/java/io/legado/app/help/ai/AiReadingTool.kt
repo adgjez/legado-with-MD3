@@ -25,6 +25,7 @@ object AiReadingTool {
                             put("author", JSONObject(mapOf("type" to "string", "description" to "作者")))
                             put("description", JSONObject(mapOf("type" to "string", "description" to "书籍简介或风格描述")))
                             put("style", JSONObject(mapOf("type" to "string", "description" to "封面风格：fantasy/xianxia/scifi/romance/horror/modern")))
+                            put("size", JSONObject(mapOf("type" to "string", "description" to "图片尺寸，如 1024x768, 1024x1024")))
                         })
                         put("required", JSONArray().put("title"))
                     })
@@ -44,7 +45,7 @@ object AiReadingTool {
                         put("properties", JSONObject().apply {
                             put("scene_description", JSONObject(mapOf("type" to "string", "description" to "场景描述")))
                             put("style", JSONObject(mapOf("type" to "string", "description" to "画风：anime/realistic/watercolor/ink")))
-                            put("size", JSONObject(mapOf("type" to "string", "description" to "尺寸")))
+                            put("size", JSONObject(mapOf("type" to "string", "description" to "图片尺寸，如 1024x768")))
                         })
                         put("required", JSONArray().put("scene_description"))
                     })
@@ -65,6 +66,7 @@ object AiReadingTool {
                             put("character_name", JSONObject(mapOf("type" to "string", "description" to "角色名")))
                             put("description", JSONObject(mapOf("type" to "string", "description" to "角色外貌描述")))
                             put("style", JSONObject(mapOf("type" to "string", "description" to "风格")))
+                            put("size", JSONObject(mapOf("type" to "string", "description" to "图片尺寸，如 1024x1024")))
                         })
                         put("required", JSONArray().put("character_name").put("description"))
                     })
@@ -96,7 +98,8 @@ object AiReadingTool {
             append("professional book cover, high quality, ")
             append(description.take(200))
         }
-        return generateImage(coverPrompt)
+        val size = args?.optString("size")?.takeIf { it.isNotBlank() }
+        return generateImage(coverPrompt, size)
     }
 
     private suspend fun generateSceneIllustration(args: JSONObject?): String {
@@ -111,7 +114,8 @@ object AiReadingTool {
             else -> "illustration style"
         }
         val scenePrompt = "Scene illustration: $scene, $styleHint, high quality, detailed"
-        return generateImage(scenePrompt)
+        val size = args?.optString("size")?.takeIf { it.isNotBlank() }
+        return generateImage(scenePrompt, size)
     }
 
     private suspend fun generateCharacterPortrait(args: JSONObject?): String {
@@ -121,16 +125,18 @@ object AiReadingTool {
         if (desc.isBlank()) return errorJson("description is required")
         val style = args?.optString("style")?.trim().orEmpty().ifBlank { "anime" }
         val prompt = "Character portrait of $name: $desc, $style character design, full body, high quality, detailed"
-        return generateImage(prompt)
+        val size = args?.optString("size")?.takeIf { it.isNotBlank() }
+        return generateImage(prompt, size)
     }
 
-    private suspend fun generateImage(prompt: String): String {
+    private suspend fun generateImage(prompt: String, size: String? = null): String {
         val provider = AiImageService.currentProviderOrNull()
             ?: return errorJson("No available image provider")
         return runCatching {
             val image = AiImageService.generateAndStore(
                 prompt,
                 provider,
+                size,
                 metadata = AiImageGalleryManager.ImageMetadata(
                     sourceType = AiImageGalleryManager.SOURCE_TYPE_CHAT,
                     sourceText = prompt

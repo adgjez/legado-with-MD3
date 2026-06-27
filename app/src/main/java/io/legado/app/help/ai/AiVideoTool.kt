@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 object AiVideoTool {
 
-    private fun aspectRatioToSize(aspectRatio: String?): String? {
+    internal fun aspectRatioToSize(aspectRatio: String?): String? {
         if (aspectRatio.isNullOrBlank()) return null
         return when (aspectRatio.trim().replace(" ", "")) {
             "16:9" -> "1280x720"
@@ -17,7 +17,7 @@ object AiVideoTool {
         }
     }
 
-    private fun buildExtraParams(args: JSONObject?): JSONObject {
+    internal fun buildExtraParams(args: JSONObject?): JSONObject {
         val params = JSONObject()
         val numFrames = args?.optInt("numFrames", 0)?.takeIf { it > 0 }
         val aspectRatio = args?.optString("aspectRatio")?.takeIf { it.isNotBlank() }

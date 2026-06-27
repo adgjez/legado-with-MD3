@@ -254,12 +254,13 @@ internal object AiToolExecutor {
         val hint = AiPromptRewriter.generateProgressHint("video", "")
         AiGenTaskManager.updateEmotionalHint(taskId, hint)
         return try {
+            val extraParams = AiVideoTool.buildExtraParams(args)
             val submitResult = AiVideoService.submit(
                 prompt = prompt,
                 inputImageId = inputImageId,
                 tailImageId = tailImageId,
                 referenceImageId = referenceImageId,
-                params = JSONObject(),
+                params = extraParams,
                 provider = targetProvider
             )
             AiGenTaskManager.submitTask(taskId, submitResult.remoteTaskId)
