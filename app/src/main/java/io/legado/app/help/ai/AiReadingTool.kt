@@ -5,12 +5,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 阅读相关的 AI 工具：书籍封面生成、场景插画、角色画像。
+ * 阅读相关的 AI 工具：书籍封面生成、场景插画、角色画像、场景视频。
  * 融合聊天模型（图片理解）-> 图片模型（文生图/图生图）-> 视频模型（图生视频）能力。
  */
 object AiReadingTool {
 
     fun resolvedTools(): List<AiResolvedTool> = listOf(
+        // ── 图片生成 ──
         AiResolvedTool(
             name = "generate_book_cover",
             definition = JSONObject().apply {
@@ -73,6 +74,28 @@ object AiReadingTool {
                 })
             },
             execute = { params -> generateCharacterPortrait(params) }
+        ),
+        // ── 视频生成（阅读场景）──
+        AiResolvedTool(
+            name = "generate_scene_video",
+            definition = JSONObject().apply {
+                put("type", "function")
+                put("function", JSONObject().apply {
+                    put("name", "generate_scene_video")
+                    put("description", "根据阅读场景生成视频。先根据场景描述生成插画，再根据插画生成动态视频。适用于将当前阅读的精彩场景转化为短视频。")
+                    put("parameters", JSONObject().apply {
+                        put("type", "object")
+                        put("properties", JSONObject().apply {
+                            put("scene_description", JSONObject(mapOf("type" to "string", "description" to "场景描述")))
+                            put("style", JSONObject(mapOf("type" to "string", "description" to "画风：anime/realistic/watercolor/ink")))
+                            put("numFrames", JSONObject(mapOf("type" to "integer", "description" to "视频帧数（8n+1，默认121）")))
+                            put("aspectRatio", JSONObject(mapOf("type" to "string", "description" to "视频比例：16:9, 9:16, 1:1")))
+                        })
+                        put("required", JSONArray().put("scene_description"))
+                    })
+                })
+            },
+            execute = { params -> generateSceneVideo(params) }
         )
     )
 
@@ -161,5 +184,49 @@ object AiReadingTool {
             put("ok", false)
             put("error", message)
         }.toString()
+    }
+
+    private suspend fun generateSceneVideo(args: JSONObject?): String {
+        val scene = args?.optString("scene_description")?.trim().orEmpty()
+        if (scene.isBlank()) return errorJson("scene_description is required")
+        val style = args?.optString("style")?.trim().orEmpty().ifBlank { "anime" }
+        val styleHint = when (style) {
+            "anime" -> "anime style, vibrant colors"
+            "realistic" -> "cinematic realism, dramatic lighting"
+            "watercolor" -> "watercolor painting style, soft edges"
+            "ink" -> "traditional Chinese ink wash painting"
+            else -> "illustration style"
+        }
+        val scenePrompt = "Scene illustration: $scene, $styleHint, high quality, detailed"
+        // 1. 先生成场景图片
+        val imageJson = generateImage(scenePrompt)
+        val imageResult = runCatching { JSONObject(imageJson) }.getOrNull() ?: return imageJson
+        if (!imageResult.optBoolean("ok", false)) return imageJson
+        val imageId = imageResult.optString("imageId", "")
+        if (imageId.isBlank()) return errorJson("Failed to extract imageId from scene image generation")
+        // 2. 从图片生成视频
+        val videoPrompt = "$scene, cinematic motion, smooth camera movement, $styleHint"
+        val extraParams = AiVideoTool.buildExtraParams(args)
+        return runCatching {
+            val video = AiVideoService.generateAndStore(
+                videoPrompt, imageId, null, null, null, extraParams,
+                metadata = AiVideoGalleryManager.VideoMetadata(
+                    sourceType = AiVideoGalleryManager.SOURCE_TYPE_READ_INSERT,
+                    sourceText = videoPrompt
+                )
+            )
+            JSONObject().apply {
+                put("ok", true)
+                put("success", true)
+                put("type", "video")
+                put("videoId", video.id)
+                put("videoPath", video.localPath)
+                put("name", video.name)
+                put("prompt", videoPrompt)
+                put("sourceType", "read_insert")
+            }.toString()
+        }.getOrElse {
+            errorJson(it.localizedMessage ?: it.javaClass.simpleName)
+        }
     }
 }

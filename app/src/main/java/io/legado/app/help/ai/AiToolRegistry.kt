@@ -11,7 +11,7 @@ data class AiResolvedTool(
 
 object AiToolRegistry {
 
-    private const val TOOL_SETTINGS_VERSION = 16
+    private const val TOOL_SETTINGS_VERSION = 17
     private val version2AddedDefaultTools = setOf(
         "list_speech_catalogs",
         "assign_character_speech_route",
@@ -88,6 +88,13 @@ object AiToolRegistry {
         "generate_image_from_image"
     )
 
+    // v17: 新增阅读场景视频、角色视频、画廊视频
+    private val version17AddedDefaultTools = setOf(
+        "generate_scene_video",
+        "generate_character_video",
+        "generate_gallery_video"
+    )
+
     val characterCompanionToolNames = setOf(
         "query_bookshelf",
         "get_bookshelf_book_info",
@@ -95,7 +102,9 @@ object AiToolRegistry {
         "search_book_chapter_content",
         "read_book_chapter_content",
         "generate_image",
-        "generate_image_from_image"
+        "generate_image_from_image",
+        "generate_video",
+        "generate_video_from_image"
     )
 
     val readSafeToolNames = setOf(
@@ -107,6 +116,9 @@ object AiToolRegistry {
         "query_read_records",
         "generate_image",
         "generate_image_from_image",
+        "generate_scene_video",
+        "generate_video",
+        "generate_video_from_image",
         "list_book_characters",
         "upsert_book_character",
         "list_book_character_relations",
@@ -194,6 +206,9 @@ object AiToolRegistry {
         "generate_video_from_image",
         "generate_video_keyframes",
         "generate_video_multi_image",
+        "generate_scene_video",
+        "generate_character_video",
+        "generate_gallery_video",
         "extract_video_frame",
         "continue_video_from_frame",
         "sanitize_text",
@@ -263,6 +278,9 @@ object AiToolRegistry {
         "generate_video_from_image" to "图生视频",
         "generate_video_keyframes" to "关键帧动画",
         "generate_video_multi_image" to "多图视频",
+        "generate_scene_video" to "阅读场景视频",
+        "generate_character_video" to "角色视频",
+        "generate_gallery_video" to "画廊视频",
         "extract_video_frame" to "提取视频帧",
         "continue_video_from_frame" to "视频接力续写",
         "sanitize_text" to "AI 文本净化",
@@ -334,7 +352,10 @@ object AiToolRegistry {
         "generate_video" to "AI 生视频",
         "generate_video_from_image" to "AI 生视频",
         "generate_video_keyframes" to "AI 生视频",
-        "generate_video_multi_image" to "AI 生视频",
+        "generate_video_multi_image" to "AI 视频",
+        "generate_scene_video" to "AI 视频",
+        "generate_character_video" to "AI 视频",
+        "generate_gallery_video" to "AI 视频",
         "extract_video_frame" to "AI 生视频",
         "continue_video_from_frame" to "AI 生视频",
         "sanitize_text" to "AI 文本净化",
@@ -427,6 +448,7 @@ object AiToolRegistry {
                 if (AppConfig.aiEnabledToolNamesVersion < 14) addAll(version14AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 15) addAll(version15AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 16) addAll(version16AddedDefaultTools)
+                if (AppConfig.aiEnabledToolNamesVersion < 17) addAll(version17AddedDefaultTools)
             }
             val migrated = (stored.ifEmpty { defaultEnabledTools } + additions)
                 .filter { it.isNotBlank() }

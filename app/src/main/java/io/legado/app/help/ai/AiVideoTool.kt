@@ -634,6 +634,77 @@ object AiVideoTool {
                     }
                 }
             }
+        ),
+        // ── 画廊视频生成 ──
+        AiResolvedTool(
+            name = "generate_gallery_video",
+            definition = JSONObject().apply {
+                put("type", "function")
+                put("function", JSONObject().apply {
+                    put("name", "generate_gallery_video")
+                    put("description", "Generate a video from an image in the AI gallery. Use this when the user wants to animate a gallery image.")
+                    put("parameters", JSONObject().apply {
+                        put("type", "object")
+                        put("properties", JSONObject().apply {
+                            put("prompt", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Video prompt describing the desired motion.")
+                            })
+                            put("inputImageId", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "AI image gallery image id to use as the first frame.")
+                            })
+                            put("numFrames", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Number of frames (8n+1 rule, default 121).")
+                            })
+                            put("aspectRatio", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
+                            })
+                            put("frameRate", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Frame rate (1-60, default 24).")
+                            })
+                        })
+                        put("required", JSONArray().put("prompt").put("inputImageId"))
+                    })
+                })
+            },
+            execute = { args ->
+                val prompt = args?.optString("prompt").orEmpty().trim()
+                val inputImageId = args?.optString("inputImageId").orEmpty().trim()
+                if (prompt.isBlank()) {
+                    JSONObject().put("ok", false).put("success", false).put("error", "prompt is empty").toString()
+                } else if (inputImageId.isBlank()) {
+                    JSONObject().put("ok", false).put("success", false).put("error", "inputImageId is empty").toString()
+                } else {
+                    runCatching {
+                        val extraParams = buildExtraParams(args)
+                        val video = AiVideoService.generateAndStore(
+                            prompt, inputImageId, null, null, null, extraParams,
+                            metadata = AiVideoGalleryManager.VideoMetadata(
+                                sourceType = AiVideoGalleryManager.SOURCE_TYPE_GALLERY,
+                                sourceText = prompt
+                            )
+                        )
+                        JSONObject().apply {
+                            put("ok", true)
+                            put("success", true)
+                            put("type", "video")
+                            put("videoId", video.id)
+                            put("videoPath", video.localPath)
+                            put("name", video.name)
+                            put("prompt", prompt)
+                            put("sourceType", "gallery")
+                        }.toString()
+                    }.getOrElse {
+                        JSONObject().put("ok", false).put("success", false)
+                            .put("error", it.localizedMessage ?: it.javaClass.simpleName)
+                            .toString()
+                    }
+                }
+            }
         )
     )
 }

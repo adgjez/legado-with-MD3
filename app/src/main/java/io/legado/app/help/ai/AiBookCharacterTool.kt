@@ -41,6 +41,7 @@ object AiBookCharacterTool {
     private const val TOOL_ASSIGN_CHARACTER_SPEECH_ROUTE = "assign_character_speech_route"
     private const val TOOL_BATCH_ASSIGN_CHARACTER_SPEECH_ROUTES = "batch_assign_character_speech_routes"
     private const val TOOL_CLEAR_CHARACTER_SPEECH_ROUTES = "clear_character_speech_routes"
+    private const val TOOL_GENERATE_CHARACTER_VIDEO = "generate_character_video"
 
     private fun characterKey(book: Book): String {
         return BookCharacterIdentityMigrator.migrate(book).ifBlank { book.characterBookKey() }
@@ -82,6 +83,9 @@ object AiBookCharacterTool {
             },
             AiResolvedTool(TOOL_CLEAR_CHARACTER_SPEECH_ROUTES, clearCharacterSpeechRoutesDefinition()) { args ->
                 clearCharacterSpeechRoutes(args)
+            },
+            AiResolvedTool(TOOL_GENERATE_CHARACTER_VIDEO, generateCharacterVideoDefinition()) { args ->
+                generateCharacterVideo(args)
             },
         )
     }
@@ -184,6 +188,18 @@ object AiBookCharacterTool {
         put("prompt", stringProp("可选，头像生成提示词；为空时会根据角色资料自动生成。"))
         put("size", stringProp("可选，图片尺寸，如 1024x1024, 1024x768, 1792x1024。"))
         put("providerId", stringProp("可选，指定生图提供商 ID；只有用户明确选择某个生图模型时才传入，否则留空。"))
+    }
+
+    private fun generateCharacterVideoDefinition() = function(
+        TOOL_GENERATE_CHARACTER_VIDEO,
+        "为指定角色生成头像动画视频。使用角色的当前头像图片，根据提示词生成动态视频。只有用户明确要求生成角色视频或头像动画时才调用。"
+    ) {
+        bookProps(this)
+        put("characterId", intProp("可选，角色 ID。"))
+        put("name", stringProp("可选，角色名称。"))
+        put("prompt", stringProp("可选，视频提示词，描述期望的动态效果；为空时自动生成。"))
+        put("numFrames", intProp("可选，视频帧数（8n+1，默认121）。"))
+        put("aspectRatio", stringProp("可选，视频比例：16:9, 9:16, 1:1。"))
     }
 
     private fun listSpeechCatalogsDefinition() = function(
@@ -870,6 +886,48 @@ object AiBookCharacterTool {
             put("image", imageJson(image.copy(favorite = true, groupId = image.groupId ?: AiImageGalleryManager.DEFAULT_GROUP_ID)))
             put("prompt", prompt)
         }.toString()
+    }
+
+    private suspend fun generateCharacterVideo(args: JSONObject?): String {
+        val resolved = withContext(IO) {
+            val book = resolveBook(args) ?: return@withContext null
+            val character = resolveCharacter(characterKey(book), args) ?: return@withContext null
+            book to character
+        } ?: return errorJson("未找到书籍或角色")
+        val (book, character) = resolved
+        // 查找角色头像图片
+        val avatarImage = if (character.avatar.isNotBlank()) {
+            withContext(IO) {
+                appDb.aiGeneratedImageDao.all().find { it.localPath == character.avatar }
+            }
+        } else null
+        if (avatarImage == null) return errorJson("角色未设置头像，请先生成头像")
+        val prompt = args?.optString("prompt")?.trim()?.takeIf { it.isNotBlank() }
+            ?: "Animate the character portrait of ${character.name}, gentle motion, cinematic quality"
+        val extraParams = AiVideoTool.buildExtraParams(args)
+        return runCatching {
+            val video = AiVideoService.generateAndStore(
+                prompt, avatarImage.id, null, null, null, extraParams,
+                metadata = AiVideoGalleryManager.VideoMetadata(
+                    bookName = book.name,
+                    bookAuthor = book.author,
+                    sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHARACTER_AVATAR,
+                    sourceText = prompt
+                )
+            )
+            JSONObject().apply {
+                put("ok", true)
+                put("success", true)
+                put("type", "video")
+                put("videoId", video.id)
+                put("videoPath", video.localPath)
+                put("characterName", character.name)
+                put("prompt", prompt)
+                put("sourceType", "character_avatar")
+            }.toString()
+        }.getOrElse {
+            errorJson("生成角色视频失败：${it.localizedMessage ?: it.javaClass.simpleName}")
+        }
     }
 
     private fun resolveBook(args: JSONObject?): Book? {
