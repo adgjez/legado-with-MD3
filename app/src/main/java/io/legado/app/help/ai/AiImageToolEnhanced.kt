@@ -22,6 +22,7 @@ object AiImageToolEnhanced {
                             put("prompt", JSONObject(mapOf("type" to "string", "description" to "图片描述")))
                             put("n", JSONObject(mapOf("type" to "integer", "description" to "生成数量，默认2")))
                             put("negativePrompt", JSONObject(mapOf("type" to "string", "description" to "负向提示词")))
+                            put("size", JSONObject(mapOf("type" to "string", "description" to "图片尺寸，如 1024x768, 1024x1024, 1792x1024")))
                             put("providerId", JSONObject(mapOf("type" to "string")))
                         })
                         put("required", JSONArray().put("prompt"))
@@ -37,6 +38,7 @@ object AiImageToolEnhanced {
                     ?: AiImageService.currentProviderOrNull()
                     ?: return@AiResolvedTool errorJson("No available image provider")
                 val n = (params?.optInt("n", 2) ?: 2).coerceIn(1, 10)
+                val size = params?.optString("size")?.takeIf { it.isNotBlank() }
                 val negativePrompt = params?.optString("negativePrompt")?.trim().orEmpty()
                 val metadata = AiImageGalleryManager.ImageMetadata(
                     sourceType = AiImageGalleryManager.SOURCE_TYPE_CHAT,
@@ -45,7 +47,7 @@ object AiImageToolEnhanced {
                 )
                 try {
                     val images: List<AiGeneratedImage> =
-                        AiImageService.generateBatch(prompt, n, provider, metadata)
+                        AiImageService.generateBatch(prompt, n, provider, size, metadata)
                     if (images.isEmpty()) {
                         return@AiResolvedTool errorJson("Batch generation produced no images")
                     }
@@ -82,6 +84,7 @@ object AiImageToolEnhanced {
                         put("properties", JSONObject().apply {
                             put("prompt", JSONObject(mapOf("type" to "string")))
                             put("inputImageId", JSONObject(mapOf("type" to "string", "description" to "要编辑的图片ID")))
+                            put("size", JSONObject(mapOf("type" to "string", "description" to "输出图片尺寸，如 1024x768")))
                             put("providerId", JSONObject(mapOf("type" to "string")))
                         })
                         put("required", JSONArray().put("prompt").put("inputImageId"))
@@ -100,13 +103,14 @@ object AiImageToolEnhanced {
                 val provider = AiImageService.providerByIdOrNull(params?.optString("providerId"))
                     ?: AiImageService.currentProviderOrNull()
                     ?: return@AiResolvedTool errorJson("No available image provider")
+                val size = params?.optString("size")?.takeIf { it.isNotBlank() }
                 val metadata = AiImageGalleryManager.ImageMetadata(
                     sourceType = AiImageGalleryManager.SOURCE_TYPE_CHAT,
                     sourceText = prompt
                 )
                 try {
                     val image = AiImageService.generateFromImage(
-                        prompt, inputImageId, null, provider, metadata = metadata
+                        prompt, inputImageId, null, provider, size, metadata = metadata
                     )
                     JSONObject().apply {
                         put("ok", true)
@@ -135,6 +139,7 @@ object AiImageToolEnhanced {
                             put("prompt", JSONObject(mapOf("type" to "string")))
                             put("inputImageId", JSONObject(mapOf("type" to "string")))
                             put("maskDescription", JSONObject(mapOf("type" to "string", "description" to "要重绘的区域描述")))
+                            put("size", JSONObject(mapOf("type" to "string", "description" to "输出图片尺寸，如 1024x768")))
                         })
                         put("required", JSONArray().put("prompt").put("inputImageId"))
                     })
@@ -153,6 +158,7 @@ object AiImageToolEnhanced {
                 val provider = AiImageService.providerByIdOrNull(params?.optString("providerId"))
                     ?: AiImageService.currentProviderOrNull()
                     ?: return@AiResolvedTool errorJson("No available image provider")
+                val size = params?.optString("size")?.takeIf { it.isNotBlank() }
                 // For now, maskDescription is passed as part of prompt; no real mask base64 yet.
                 val effectivePrompt = if (maskDescription.isBlank()) prompt
                 else "$prompt\n\n重绘区域: $maskDescription"
@@ -162,7 +168,7 @@ object AiImageToolEnhanced {
                 )
                 try {
                     val image = AiImageService.generateFromImage(
-                        effectivePrompt, inputImageId, null, provider, metadata = metadata
+                        effectivePrompt, inputImageId, null, provider, size, metadata = metadata
                     )
                     JSONObject().apply {
                         put("ok", true)

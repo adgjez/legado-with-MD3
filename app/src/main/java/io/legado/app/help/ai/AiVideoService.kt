@@ -160,8 +160,9 @@ object AiVideoService {
     suspend fun generateAndStore(
         prompt: String,
         provider: AiVideoProviderConfig? = null,
+        extraParams: JSONObject? = null,
         metadata: AiVideoGalleryManager.VideoMetadata = AiVideoGalleryManager.VideoMetadata()
-    ): AiGeneratedVideo = generateAndStore(prompt, null, null, null, provider, metadata)
+    ): AiGeneratedVideo = generateAndStore(prompt, null, null, null, provider, extraParams, metadata)
 
     /**
      * 完整的同步封装：submit -> poll -> download -> store。
@@ -172,6 +173,7 @@ object AiVideoService {
         tailImageId: String?,
         referenceImageId: String?,
         provider: AiVideoProviderConfig? = null,
+        extraParams: JSONObject? = null,
         metadata: AiVideoGalleryManager.VideoMetadata = AiVideoGalleryManager.VideoMetadata()
     ): AiGeneratedVideo {
         val target = resolveProvider(provider)
@@ -179,6 +181,9 @@ object AiVideoService {
         val params = runCatching {
             JSONObject(target.defaultParamsJson.ifBlank { "{}" })
         }.getOrDefault(JSONObject())
+
+        // Merge tool-provided extra params (numFrames, size, frameRate, seed, negativePrompt, etc.)
+        extraParams?.keys()?.forEach { key -> params.put(key, extraParams.opt(key)) }
 
         val submitResult = submit(effective, inputImageId, tailImageId, referenceImageId, params, target)
         val remoteTaskId = submitResult.remoteTaskId

@@ -4,6 +4,36 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object AiVideoTool {
+
+    private fun aspectRatioToSize(aspectRatio: String?): String? {
+        if (aspectRatio.isNullOrBlank()) return null
+        return when (aspectRatio.trim().replace(" ", "")) {
+            "16:9" -> "1280x720"
+            "9:16" -> "720x1280"
+            "1:1" -> "768x768"
+            "4:3" -> "1024x768"
+            "3:4" -> "768x1024"
+            else -> null
+        }
+    }
+
+    private fun buildExtraParams(args: JSONObject?): JSONObject {
+        val params = JSONObject()
+        val numFrames = args?.optInt("numFrames", 0)?.takeIf { it > 0 }
+        val aspectRatio = args?.optString("aspectRatio")?.takeIf { it.isNotBlank() }
+        val frameRate = args?.optInt("frameRate", 0)?.takeIf { it > 0 }
+        val seed = args?.optLong("seed", -1L)?.takeIf { it >= 0L }
+        val negativePrompt = args?.optString("negativePrompt")?.takeIf { it.isNotBlank() }
+
+        numFrames?.let { params.put("num_frames", it) }
+        aspectRatioToSize(aspectRatio)?.let { params.put("size", it) }
+        frameRate?.let { params.put("frame_rate", it) }
+        seed?.let { params.put("seed", it) }
+        negativePrompt?.let { params.put("negative_prompt", it) }
+
+        return params
+    }
+
     fun resolvedTools(): List<AiResolvedTool> = listOf(
         // ── 文生视频 ──
         AiResolvedTool(
@@ -40,6 +70,14 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Camera control parameters, e.g. pan, zoom, orbit.")
                             })
+                            put("frameRate", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Video frame rate (1-60, default 24). Higher = smoother but shorter video for same numFrames.")
+                            })
+                            put("seed", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Random seed for reproducible results.")
+                            })
                             put("referenceImageId", JSONObject().apply {
                                 put("type", "string")
                                 put("description", "Optional reference image id from the AI image gallery to guide the video.")
@@ -66,12 +104,14 @@ object AiVideoTool {
                             .toString()
                     } else {
                         runCatching {
+                            val extraParams = buildExtraParams(args)
                             val video = AiVideoService.generateAndStore(
                                 prompt,
                                 referenceImageId,
                                 null,
                                 null,
                                 provider,
+                                extraParams,
                                 metadata = AiVideoGalleryManager.VideoMetadata(
                                     sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt
@@ -150,6 +190,14 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Camera control parameters, e.g. pan, zoom, orbit.")
                             })
+                            put("frameRate", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Video frame rate (1-60, default 24).")
+                            })
+                            put("seed", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Random seed for reproducible results.")
+                            })
                         })
                         put("required", JSONArray().put("prompt").put("inputImageId"))
                     })
@@ -175,12 +223,14 @@ object AiVideoTool {
                             .toString()
                     } else {
                         runCatching {
+                            val extraParams = buildExtraParams(args)
                             val video = AiVideoService.generateAndStore(
                                 prompt,
                                 inputImageId,
                                 tailImageId,
                                 null,
                                 provider,
+                                extraParams,
                                 metadata = AiVideoGalleryManager.VideoMetadata(
                                     sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt
@@ -251,6 +301,18 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
                             })
+                            put("frameRate", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Video frame rate (1-60, default 24).")
+                            })
+                            put("seed", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Random seed for reproducible results.")
+                            })
+                            put("negativePrompt", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Negative prompt describing content to avoid.")
+                            })
                         })
                         put("required", JSONArray().put("inputImageId").put("tailImageId"))
                     })
@@ -275,12 +337,14 @@ object AiVideoTool {
                             .toString()
                     } else {
                         runCatching {
+                            val extraParams = buildExtraParams(args)
                             val video = AiVideoService.generateAndStore(
                                 prompt.ifBlank { "Create a smooth transition from the first keyframe to the second keyframe" },
                                 inputImageId,
                                 tailImageId,
                                 null,
                                 provider,
+                                extraParams,
                                 metadata = AiVideoGalleryManager.VideoMetadata(
                                     sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt
@@ -346,6 +410,18 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
                             })
+                            put("frameRate", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Video frame rate (1-60, default 24).")
+                            })
+                            put("seed", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Random seed for reproducible results.")
+                            })
+                            put("negativePrompt", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Negative prompt describing content to avoid.")
+                            })
                         })
                         put("required", JSONArray().put("prompt").put("inputImageId"))
                     })
@@ -370,12 +446,14 @@ object AiVideoTool {
                             .toString()
                     } else {
                         runCatching {
+                            val extraParams = buildExtraParams(args)
                             val video = AiVideoService.generateAndStore(
                                 prompt,
                                 inputImageId,
                                 null,
                                 referenceImageId,
                                 provider,
+                                extraParams,
                                 metadata = AiVideoGalleryManager.VideoMetadata(
                                     sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt
@@ -485,6 +563,18 @@ object AiVideoTool {
                                 put("type", "integer")
                                 put("description", "Number of frames to generate (8n+1 rule, max 441, default 121). More frames = longer video.")
                             })
+                            put("aspectRatio", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
+                            })
+                            put("frameRate", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Video frame rate (1-60, default 24).")
+                            })
+                            put("seed", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Random seed for reproducible results.")
+                            })
                         })
                         put("required", JSONArray().put("videoId"))
                     })
@@ -507,12 +597,14 @@ object AiVideoTool {
                     } else {
                         runCatching {
                             val frame = AiVideoService.extractLastFrame(videoId)
+                            val extraParams = buildExtraParams(args)
                             val video = AiVideoService.generateAndStore(
                                 prompt,
                                 frame.id,
                                 null,
                                 null,
                                 provider,
+                                extraParams,
                                 metadata = AiVideoGalleryManager.VideoMetadata(
                                     sourceType = AiVideoGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt
