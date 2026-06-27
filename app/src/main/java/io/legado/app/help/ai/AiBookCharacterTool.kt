@@ -898,7 +898,8 @@ object AiBookCharacterTool {
         // 查找角色头像图片
         val avatarImage = if (character.avatar.isNotBlank()) {
             withContext(IO) {
-                appDb.aiGeneratedImageDao.all().find { it.localPath == character.avatar }
+                appDb.aiGeneratedImageDao.byCharacter(character.id)
+                    .firstOrNull { it.localPath == character.avatar }
             }
         } else null
         if (avatarImage == null) return errorJson("角色未设置头像，请先生成头像")

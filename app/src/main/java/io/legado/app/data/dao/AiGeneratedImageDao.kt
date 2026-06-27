@@ -33,6 +33,9 @@ interface AiGeneratedImageDao {
     @Query("select * from ai_generated_images where sourceType = :sourceType order by createdAt desc")
     fun bySourceType(sourceType: String): List<AiGeneratedImage>
 
+    @Query("select * from ai_generated_images where characterId = :characterId order by createdAt desc")
+    fun byCharacter(characterId: Long): List<AiGeneratedImage>
+
     @Query(
         """
         select * from ai_generated_images
