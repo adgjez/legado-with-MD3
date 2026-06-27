@@ -45,10 +45,11 @@ object AiImageService {
     suspend fun generateAndStore(
         prompt: String,
         provider: AiImageProviderConfig? = null,
+        size: String? = null,
         metadata: AiImageGalleryManager.ImageMetadata = AiImageGalleryManager.ImageMetadata()
     ): AiGeneratedImage {
         val target = resolveProvider(provider)
-        val image = generateRaw(effectivePrompt(prompt, target), target)
+        val image = generateRaw(effectivePrompt(prompt, target), target, size)
         return AiImageGalleryManager.saveGeneratedImage(image.source, prompt, target, image.model, metadata)
     }
 
@@ -74,6 +75,7 @@ object AiImageService {
         inputImageId: String,
         maskBase64: String? = null,
         provider: AiImageProviderConfig? = null,
+        size: String? = null,
         metadata: AiImageGalleryManager.ImageMetadata? = null
     ): AiGeneratedImage {
         val targetProvider = provider ?: currentProviderOrNull()
@@ -83,7 +85,7 @@ object AiImageService {
 
         return when (targetProvider.type) {
             AiImageProviderConfig.TYPE_OPENAI -> {
-                generateFromImageOpenAi(prompt, inputImage, maskBase64, targetProvider, metadata)
+                generateFromImageOpenAi(prompt, inputImage, maskBase64, targetProvider, size, metadata)
             }
             AiImageProviderConfig.TYPE_JS -> {
                 generateFromImageJs(prompt, inputImage, maskBase64, targetProvider, metadata)
@@ -97,6 +99,7 @@ object AiImageService {
         inputImage: AiGeneratedImage,
         maskBase64: String?,
         provider: AiImageProviderConfig,
+        size: String?,
         metadata: AiImageGalleryManager.ImageMetadata?
     ): AiGeneratedImage {
         val baseUrl = normalizeBaseUrl(provider.baseUrl)
@@ -120,7 +123,7 @@ object AiImageService {
         val payload = JSONObject().apply {
             put("model", effectiveModel)
             put("prompt", prompt)
-            put("size", params.optString("size", "1024x1024"))
+            put("size", size ?: params.optString("size", "1024x1024"))
             // 合并 extra_body 和其他参数
             val extraBodyFromParams = params.optJSONObject("extra_body")
             if (extraBodyFromParams != null) {
@@ -263,18 +266,21 @@ object AiImageService {
         }
     }
 
-    private suspend fun generateRaw(prompt: String, target: AiImageProviderConfig): ImageGenerationResult {
+    private suspend fun generateRaw(prompt: String, target: AiImageProviderConfig, size: String? = null): ImageGenerationResult {
         return when (target.type) {
             AiImageProviderConfig.TYPE_JS -> generateByJs(prompt, target)
-            else -> generateByOpenAi(prompt, target)
+            else -> generateByOpenAi(prompt, target, size)
         }
     }
 
-    private suspend fun generateByOpenAi(prompt: String, provider: AiImageProviderConfig): ImageGenerationResult {
+    private suspend fun generateByOpenAi(prompt: String, provider: AiImageProviderConfig, size: String? = null): ImageGenerationResult {
         val baseUrl = normalizeBaseUrl(provider.baseUrl)
         require(baseUrl.isNotBlank()) { "Base URL is empty" }
         val params = runCatching { JSONObject(provider.defaultParamsJson.ifBlank { "{}" }) }
             .getOrDefault(JSONObject())
+        if (!size.isNullOrBlank()) {
+            params.put("size", size)
+        }
         return if (params.optString("endpoint").equals("responses", true)) {
             generateByResponses(prompt, provider, baseUrl, params)
         } else {

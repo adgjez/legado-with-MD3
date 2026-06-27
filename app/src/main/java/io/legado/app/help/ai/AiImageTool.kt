@@ -19,6 +19,10 @@ object AiImageTool {
                                 put("type", "string")
                                 put("description", "Image prompt")
                             })
+                            put("size", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Image size, e.g. 1024x1024, 1792x1024, 1024x1792. Default is 1024x1024.")
+                            })
                             put("providerId", JSONObject().apply {
                                 put("type", "string")
                                 put("description", "Optional image provider id. Use only when user explicitly selects an image model; otherwise omit it.")
@@ -34,6 +38,7 @@ object AiImageTool {
                     JSONObject().put("ok", false).put("success", false).put("error", "prompt is empty").toString()
                 } else {
                     val providerId = args?.optString("providerId").orEmpty().trim()
+                    val size = args?.optString("size")?.takeIf { it.isNotBlank() }
                     val provider = if (providerId.isBlank()) {
                         null
                     } else {
@@ -51,6 +56,7 @@ object AiImageTool {
                             val image = AiImageService.generateAndStore(
                                 prompt,
                                 provider,
+                                size,
                                 metadata = AiImageGalleryManager.ImageMetadata(
                                     sourceType = AiImageGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt
@@ -105,6 +111,10 @@ object AiImageTool {
                                 put("type", "string")
                                 put("description", "AI image gallery image id to use as the base/reference image.")
                             })
+                            put("size", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Image size, e.g. 1024x1024, 1792x1024, 1024x1792. Default is 1024x1024.")
+                            })
                             put("providerId", JSONObject().apply {
                                 put("type", "string")
                                 put("description", "Optional image provider id. Use only when user explicitly selects an image model; otherwise omit it.")
@@ -123,6 +133,7 @@ object AiImageTool {
                     JSONObject().put("ok", false).put("success", false).put("error", "inputImageId is empty").toString()
                 } else {
                     val providerId = args?.optString("providerId").orEmpty().trim()
+                    val size = args?.optString("size")?.takeIf { it.isNotBlank() }
                     val provider = if (providerId.isBlank()) null else AiImageService.providerByIdOrNull(providerId)
                     val targetProvider = provider ?: AiImageService.currentProviderOrNull()
                     if (providerId.isNotBlank() && provider == null) {
@@ -138,6 +149,7 @@ object AiImageTool {
                                 inputImageId,
                                 null,
                                 provider,
+                                size,
                                 metadata = AiImageGalleryManager.ImageMetadata(
                                     sourceType = AiImageGalleryManager.SOURCE_TYPE_CHAT,
                                     sourceText = prompt

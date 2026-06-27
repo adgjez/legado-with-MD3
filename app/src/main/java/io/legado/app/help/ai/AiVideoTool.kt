@@ -142,6 +142,10 @@ object AiVideoTool {
                                 put("type", "number")
                                 put("description", "Video duration in seconds.")
                             })
+                            put("aspectRatio", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
+                            })
                             put("cameraControl", JSONObject().apply {
                                 put("type", "string")
                                 put("description", "Camera control parameters, e.g. pan, zoom, orbit.")
@@ -239,6 +243,14 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Optional video provider id.")
                             })
+                            put("duration", JSONObject().apply {
+                                put("type", "number")
+                                put("description", "Video duration in seconds.")
+                            })
+                            put("aspectRatio", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
+                            })
                         })
                         put("required", JSONArray().put("inputImageId").put("tailImageId"))
                     })
@@ -325,6 +337,14 @@ object AiVideoTool {
                             put("providerId", JSONObject().apply {
                                 put("type", "string")
                                 put("description", "Optional video provider id.")
+                            })
+                            put("duration", JSONObject().apply {
+                                put("type", "number")
+                                put("description", "Video duration in seconds.")
+                            })
+                            put("aspectRatio", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "Video aspect ratio, e.g. 16:9, 9:16, 1:1.")
                             })
                         })
                         put("required", JSONArray().put("prompt").put("inputImageId"))
