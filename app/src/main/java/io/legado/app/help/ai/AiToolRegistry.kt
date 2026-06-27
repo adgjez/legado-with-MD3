@@ -11,7 +11,7 @@ data class AiResolvedTool(
 
 object AiToolRegistry {
 
-    private const val TOOL_SETTINGS_VERSION = 15
+    private const val TOOL_SETTINGS_VERSION = 16
     private val version2AddedDefaultTools = setOf(
         "list_speech_catalogs",
         "assign_character_speech_route",
@@ -83,6 +83,11 @@ object AiToolRegistry {
         "generate_video_multi_image"
     )
 
+    // v16: 新增图生图工具
+    private val version16AddedDefaultTools = setOf(
+        "generate_image_from_image"
+    )
+
     val characterCompanionToolNames = setOf(
         "query_bookshelf",
         "get_bookshelf_book_info",
@@ -150,6 +155,7 @@ object AiToolRegistry {
         "capture_web_requests",
         "search_web_tavily",
         "generate_image",
+        "generate_image_from_image",
         "list_book_characters",
         "upsert_book_character",
         "delete_book_character",
@@ -218,6 +224,7 @@ object AiToolRegistry {
         "capture_web_requests" to "抓包网络请求",
         "search_web_tavily" to "联网搜索",
         "generate_image" to "生成图片",
+        "generate_image_from_image" to "图生图",
         "list_book_characters" to "读取角色资料",
         "upsert_book_character" to "新增或更新角色",
         "delete_book_character" to "删除角色",
@@ -289,6 +296,7 @@ object AiToolRegistry {
         "capture_web_requests" to "阅读网络",
         "search_web_tavily" to "联网搜索",
         "generate_image" to "AI 生图",
+        "generate_image_from_image" to "AI 生图",
         "list_book_characters" to "角色资料",
         "upsert_book_character" to "角色资料",
         "delete_book_character" to "角色资料",
@@ -416,6 +424,7 @@ object AiToolRegistry {
                 if (AppConfig.aiEnabledToolNamesVersion < 13) addAll(version13AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 14) addAll(version14AddedDefaultTools)
                 if (AppConfig.aiEnabledToolNamesVersion < 15) addAll(version15AddedDefaultTools)
+                if (AppConfig.aiEnabledToolNamesVersion < 16) addAll(version16AddedDefaultTools)
             }
             val migrated = (stored.ifEmpty { defaultEnabledTools } + additions)
                 .filter { it.isNotBlank() }

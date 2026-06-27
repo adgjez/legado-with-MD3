@@ -1335,10 +1335,17 @@ object AiChatService {
             else -> "image/png"
         }
         val dataUri = "data:$mimeType;base64,$base64"
+        // 保留图片 ID 在文本中，以便 AI 调用图生图/图生视频等工具时能引用
+        val imageIdHint = "\n[image_id: $imageId]"
+        val finalText = if (textContent.isNotBlank()) {
+            "$textContent$imageIdHint"
+        } else {
+            imageIdHint.trimStart()
+        }
         return JSONArray().apply {
             put(JSONObject().apply {
                 put("type", "text")
-                put("text", textContent.ifBlank { content })
+                put("text", finalText)
             })
             put(JSONObject().apply {
                 put("type", "image_url")

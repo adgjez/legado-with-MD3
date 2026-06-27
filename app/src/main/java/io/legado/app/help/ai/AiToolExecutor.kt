@@ -19,6 +19,7 @@ internal object AiToolExecutor {
 
     private val imageToolNames = setOf(
         "generate_image",
+        "generate_image_from_image",
         "generate_book_character_avatar",
         "generate_images",
         "edit_image",
@@ -61,6 +62,7 @@ internal object AiToolExecutor {
         "capture_web_requests",
         "search_web_tavily",
         "generate_image",
+        "generate_image_from_image",
         "generate_book_character_avatar",
         "generate_images",
         "edit_image",
