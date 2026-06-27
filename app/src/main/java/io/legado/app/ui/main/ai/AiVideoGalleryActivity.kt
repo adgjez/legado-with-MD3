@@ -504,7 +504,7 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
                         reload()
                     }
                 }
-                items(listOf("导出")) {
+                positiveButton("导出") {
                     lifecycleScope.launch {
                         val file = withContext(Dispatchers.IO) {
                             AiVideoGalleryManager.resolveVideoFile(AiVideoGalleryManager.videoUri(video.id))

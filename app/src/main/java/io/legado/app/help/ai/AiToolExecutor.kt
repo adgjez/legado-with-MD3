@@ -35,7 +35,10 @@ internal object AiToolExecutor {
         "generate_video_keyframes",
         "generate_video_multi_image",
         "extract_video_frame",
-        "continue_video_from_frame"
+        "continue_video_from_frame",
+        "generate_scene_video",
+        "generate_character_video",
+        "generate_gallery_video"
     )
 
     private val sanitizeToolNames = setOf(
@@ -227,7 +230,7 @@ internal object AiToolExecutor {
             return JSONObject().put("ok", false).put("error", "prompt is empty").toString()
         }
         return when {
-            name in asyncVideoToolNames -> submitVideoTaskAsync(args, prompt)
+            name in videoToolNames -> submitVideoTaskAsync(args, prompt)
             else -> JSONObject()
                 .put("ok", false)
                 .put("error", "Tool $name does not support async submission")

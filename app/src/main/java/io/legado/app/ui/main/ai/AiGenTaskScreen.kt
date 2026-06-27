@@ -78,7 +78,7 @@ fun AiGenTaskScreen(onBack: () -> Unit) {
 
     remember { load(); Unit }
 
-    Column(modifier = Modifier.fillMaxSize().background(palette.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(palette.surface)) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),

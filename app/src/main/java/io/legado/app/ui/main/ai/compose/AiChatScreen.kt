@@ -1374,6 +1374,7 @@ private fun AiAssistantMessageRow(
                         is AiMessagePartUi.ProcessChain -> AiProcessPart(part, style, onToolPreview, onProcessExpanded)
                         is AiMessagePartUi.SearchBooks -> AiSearchBookInlinePart(part, style, onToolPreview)
                         is AiMessagePartUi.Images -> AiImageInlinePart(part, style, onToolPreview, onImageToVideo)
+                        is AiMessagePartUi.Video -> AiVideoInlinePart(part, style, onToolPreview)
                     }
                 }
             }
@@ -1627,6 +1628,28 @@ private fun AiImageInlinePart(
             }
         }
     }
+}
+
+@Composable
+private fun AiVideoInlinePart(
+    part: AiMessagePartUi.Video,
+    style: AiComposeStyle,
+    onToolPreview: (AiToolDisplayPayload) -> Unit
+) {
+    AiInfoPill(
+        text = "视频结果",
+        style = style,
+        onClick = {
+            onToolPreview(
+                AiToolDisplayPayload(
+                    type = AiToolPreviewType.Generic,
+                    title = "视频结果",
+                    summary = part.prompt,
+                    raw = part.videoPath
+                )
+            )
+        }
+    )
 }
 
 @Composable
