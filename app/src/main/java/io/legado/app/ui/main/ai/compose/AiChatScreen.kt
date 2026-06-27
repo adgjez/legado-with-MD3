@@ -109,8 +109,6 @@ import io.legado.app.ui.main.ai.AiChatCompanionConfig
 import io.legado.app.ui.main.ai.AiChatSession
 import io.legado.app.ui.main.ai.AiChatSpeechPlayer
 import io.legado.app.ui.main.ai.AiChatViewModel
-import io.legado.app.ui.main.ai.GenProgress
-import io.legado.app.ui.main.ai.AiVideoPlayerActivity
 import io.legado.app.ui.book.character.compose.CharacterAvatar
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -145,6 +143,7 @@ data class AiChatScreenActions(
     val onDeleteSession: ((AiChatSession) -> Unit)? = null,
     val onCompanionLongPress: ((AiChatCompanionConfig) -> Unit)? = null,
     val onOpenImageGen: (() -> Unit)? = null,
+    val onOpenVideoGen: (() -> Unit)? = null,
     val onOpenScriptGen: (() -> Unit)? = null,
     val onImageToVideo: ((imageId: String) -> Unit)? = null
 )
@@ -237,18 +236,14 @@ fun AiChatRoute(
 ) {
     var messages by remember { mutableStateOf(viewModel.messagesLiveData.value.orEmpty()) }
     var requesting by remember { mutableStateOf(viewModel.isRequesting) }
-    var genProgress by remember { mutableStateOf(viewModel.genProgressLiveData.value) }
     DisposableEffect(viewModel, lifecycleOwner) {
         val messageObserver = Observer<List<AiChatMessage>> { messages = it.orEmpty() }
         val requestingObserver = Observer<Boolean> { requesting = it == true }
-        val genProgressObserver = Observer<GenProgress?> { genProgress = it }
         viewModel.messagesLiveData.observe(lifecycleOwner, messageObserver)
         viewModel.requestingLiveData.observe(lifecycleOwner, requestingObserver)
-        viewModel.genProgressLiveData.observe(lifecycleOwner, genProgressObserver)
         onDispose {
             viewModel.messagesLiveData.removeObserver(messageObserver)
             viewModel.requestingLiveData.removeObserver(requestingObserver)
-            viewModel.genProgressLiveData.removeObserver(genProgressObserver)
         }
     }
     val modelLabel = remember(refreshToken, messages.size, requesting) {
@@ -278,7 +273,6 @@ fun AiChatRoute(
     AiChatScreen(
         messages = messages,
         requesting = requesting,
-        genProgress = genProgress,
         modelLabel = modelLabel,
         companions = companions,
         currentCompanion = currentCompanion,
@@ -298,7 +292,6 @@ fun AiChatRoute(
 fun AiChatScreen(
     messages: List<AiChatMessage>,
     requesting: Boolean,
-    genProgress: GenProgress?,
     modelLabel: String,
     companions: List<AiChatCompanionConfig>,
     currentCompanion: AiChatCompanionConfig,
@@ -557,55 +550,6 @@ fun AiChatScreen(
                 }
             }
         }
-        // 生成进度条
-        if (genProgress != null && genProgress.status == "generating") {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = style.surface,
-                tonalElevation = 4.dp,
-                shadowElevation = 2.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        if (genProgress.type == "video") "🎬" else "🎨",
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            if (genProgress.type == "video") "正在生成视频..." else "正在生成图片...",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = style.primaryText
-                        )
-                        Text(
-                            genProgress.prompt,
-                            fontSize = 11.sp,
-                            color = style.secondaryText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    // 动画点
-                    val dots = remember { listOf(".", "..", "...") }
-                    val dotIndex by remember {
-                        mutableStateOf(0)
-                    }
-                    Text(
-                        dots[dotIndex],
-                        fontSize = 14.sp,
-                        color = style.accent
-                    )
-                }
-            }
-        }
         AiComposer(
             requesting = requesting,
             enterToSend = enterToSend,
@@ -775,6 +719,9 @@ private fun AiChatTopBar(
                             add(AiTopMenuAction("AI 统一素材库", openUnifiedGallery))
                         }
                         add(AiTopMenuAction("AI 创作中心") { actions.onOpenImageGen?.invoke() })
+                        actions.onOpenVideoGen?.let { openVideoGen ->
+                            add(AiTopMenuAction("AI 视频生成", openVideoGen))
+                        }
                         actions.onOpenScriptGen?.let { openScriptGen ->
                             add(AiTopMenuAction("AI 脚本生成", openScriptGen))
                         }
@@ -1427,7 +1374,6 @@ private fun AiAssistantMessageRow(
                         is AiMessagePartUi.ProcessChain -> AiProcessPart(part, style, onToolPreview, onProcessExpanded)
                         is AiMessagePartUi.SearchBooks -> AiSearchBookInlinePart(part, style, onToolPreview)
                         is AiMessagePartUi.Images -> AiImageInlinePart(part, style, onToolPreview, onImageToVideo)
-                        is AiMessagePartUi.Video -> AiVideoInlinePart(part, style)
                     }
                 }
             }
@@ -1677,73 +1623,6 @@ private fun AiImageInlinePart(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AiVideoInlinePart(
-    part: AiMessagePartUi.Video,
-    style: AiComposeStyle
-) {
-    val context = LocalContext.current
-    val file = remember(part.videoPath) { java.io.File(part.videoPath) }
-    val exists = remember(part.videoPath) { file.exists() }
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = style.colors.surface.copy(alpha = 0.8f),
-        tonalElevation = 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = exists) {
-                if (exists) {
-                    AiVideoPlayerActivity.start(context, part.videoPath, part.prompt)
-                }
-            }
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 播放按钮图标
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = style.colors.accent,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        "▶",
-                        color = Color.White,
-                        fontSize = 18.sp
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "视频已生成",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = style.colors.primaryText
-                )
-                if (part.prompt.isNotBlank()) {
-                    Text(
-                        part.prompt,
-                        fontSize = 11.sp,
-                        color = style.colors.secondaryText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Text(
-                    if (exists) "点击播放" else "文件已删除",
-                    fontSize = 11.sp,
-                    color = if (exists) style.colors.accent else style.colors.error,
-                    fontWeight = FontWeight.Medium
                 )
             }
         }
