@@ -82,7 +82,7 @@ object AiStoryPipeline {
                         } else {
                             scene.visualPrompt
                         }
-                        val image = AiImageService.generateAndStore(effectivePrompt, imageProvider, metadata)
+                        val image = AiImageService.generateAndStore(effectivePrompt, imageProvider, metadata = metadata)
                         appDb.aiStorySceneDao.updateImage(scene.id, image.id, "image_done")
                         // Update scene in local list
                         scenes[index] = scene.copy(imageId = image.id, status = "image_done")

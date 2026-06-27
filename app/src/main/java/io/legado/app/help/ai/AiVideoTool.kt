@@ -28,9 +28,9 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Optional video provider id. Use only when user explicitly selects a video model; otherwise omit it.")
                             })
-                            put("duration", JSONObject().apply {
-                                put("type", "number")
-                                put("description", "Video duration in seconds.")
+                            put("numFrames", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Number of frames to generate (8n+1 rule, max 441, default 121). More frames = longer video. Duration = numFrames / frameRate.")
                             })
                             put("aspectRatio", JSONObject().apply {
                                 put("type", "string")
@@ -138,9 +138,9 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Optional video provider id. Use only when user explicitly selects a video model; otherwise omit it.")
                             })
-                            put("duration", JSONObject().apply {
-                                put("type", "number")
-                                put("description", "Video duration in seconds.")
+                            put("numFrames", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Number of frames to generate (8n+1 rule, max 441, default 121). More frames = longer video.")
                             })
                             put("aspectRatio", JSONObject().apply {
                                 put("type", "string")
@@ -243,9 +243,9 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Optional video provider id.")
                             })
-                            put("duration", JSONObject().apply {
-                                put("type", "number")
-                                put("description", "Video duration in seconds.")
+                            put("numFrames", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Number of frames to generate (8n+1 rule, max 441, default 121). More frames = longer video.")
                             })
                             put("aspectRatio", JSONObject().apply {
                                 put("type", "string")
@@ -338,9 +338,9 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Optional video provider id.")
                             })
-                            put("duration", JSONObject().apply {
-                                put("type", "number")
-                                put("description", "Video duration in seconds.")
+                            put("numFrames", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Number of frames to generate (8n+1 rule, max 441, default 121). More frames = longer video.")
                             })
                             put("aspectRatio", JSONObject().apply {
                                 put("type", "string")
@@ -481,9 +481,9 @@ object AiVideoTool {
                                 put("type", "string")
                                 put("description", "Optional video provider id.")
                             })
-                            put("duration", JSONObject().apply {
-                                put("type", "number")
-                                put("description", "Video duration in seconds.")
+                            put("numFrames", JSONObject().apply {
+                                put("type", "integer")
+                                put("description", "Number of frames to generate (8n+1 rule, max 441, default 121). More frames = longer video.")
                             })
                         })
                         put("required", JSONArray().put("videoId"))

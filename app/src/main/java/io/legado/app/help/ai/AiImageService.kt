@@ -63,7 +63,7 @@ object AiImageService {
         val results = mutableListOf<AiGeneratedImage>()
         repeat(n.coerceIn(1, 10)) {
             runCatching {
-                generateAndStore(prompt, targetProvider, metadata ?: AiImageGalleryManager.ImageMetadata())
+                generateAndStore(prompt, targetProvider, metadata = metadata ?: AiImageGalleryManager.ImageMetadata())
             }.onSuccess { results.add(it) }
                 .onFailure { AppLog.put("Batch image generation failed", it) }
         }

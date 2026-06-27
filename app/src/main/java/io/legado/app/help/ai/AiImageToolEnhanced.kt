@@ -106,7 +106,7 @@ object AiImageToolEnhanced {
                 )
                 try {
                     val image = AiImageService.generateFromImage(
-                        prompt, inputImageId, null, provider, metadata
+                        prompt, inputImageId, null, provider, metadata = metadata
                     )
                     JSONObject().apply {
                         put("ok", true)
@@ -162,7 +162,7 @@ object AiImageToolEnhanced {
                 )
                 try {
                     val image = AiImageService.generateFromImage(
-                        effectivePrompt, inputImageId, null, provider, metadata
+                        effectivePrompt, inputImageId, null, provider, metadata = metadata
                     )
                     JSONObject().apply {
                         put("ok", true)
