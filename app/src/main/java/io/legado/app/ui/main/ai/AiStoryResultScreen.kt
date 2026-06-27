@@ -79,19 +79,15 @@ fun AiStoryResultScreen(playlistId: String, onPlayAll: () -> Unit, onClose: () -
         val data = withContext(Dispatchers.IO) {
             val pl = appDb.aiStoryPlaylistDao.get(playlistId)
             val sc = appDb.aiStorySceneDao.byPlaylist(playlistId)
+            val imageIds = sc.mapNotNull { it.imageId.takeIf { id -> id.isNotBlank() } }
+            val videoIds = sc.mapNotNull { it.videoId.takeIf { id -> id.isNotBlank() } }
+            val imgMap = if (imageIds.isNotEmpty()) appDb.aiGeneratedImageDao.byIds(imageIds).associateBy { it.id } else emptyMap()
+            val vidMap = if (videoIds.isNotEmpty()) appDb.aiGeneratedVideoDao.byIds(videoIds).associateBy { it.id } else emptyMap()
             val imgPaths = mutableMapOf<String, String>()
             val vidThumbs = mutableMapOf<String, String>()
             sc.forEach { scene ->
-                if (scene.imageId.isNotBlank()) {
-                    appDb.aiGeneratedImageDao.get(scene.imageId)?.let { img ->
-                        imgPaths[scene.id] = img.localPath
-                    }
-                }
-                if (scene.videoId.isNotBlank()) {
-                    appDb.aiGeneratedVideoDao.get(scene.videoId)?.let { vid ->
-                        vidThumbs[scene.id] = vid.thumbnailPath.ifBlank { vid.localPath }
-                    }
-                }
+                imgMap[scene.imageId]?.let { imgPaths[scene.id] = it.localPath }
+                vidMap[scene.videoId]?.let { vidThumbs[scene.id] = it.thumbnailPath.ifBlank { it.localPath } }
             }
             StoryResultData(pl, sc, imgPaths, vidThumbs)
         }

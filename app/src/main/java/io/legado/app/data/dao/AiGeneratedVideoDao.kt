@@ -15,6 +15,9 @@ interface AiGeneratedVideoDao {
     @Query("select * from ai_generated_videos where id = :id")
     fun get(id: String): AiGeneratedVideo?
 
+    @Query("select * from ai_generated_videos where id in (:ids)")
+    fun byIds(ids: List<String>): List<AiGeneratedVideo>
+
     @Query("select * from ai_generated_videos where favorite = 1 order by updatedAt desc")
     fun favorites(): List<AiGeneratedVideo>
 

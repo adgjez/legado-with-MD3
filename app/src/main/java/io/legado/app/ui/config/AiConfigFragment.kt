@@ -28,6 +28,7 @@ import io.legado.app.ui.main.ai.AiUnifiedGalleryActivity
 import io.legado.app.ui.main.ai.AiSkillConfig
 import io.legado.app.ui.main.ai.AiVideoProviderConfig
 import io.legado.app.ui.main.ai.AiVideoProviderEditActivity
+import io.legado.app.ui.main.ai.AiGenTaskActivity
 import io.legado.app.ui.book.read.config.AiReadAloudUsageRecordActivity
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
@@ -180,7 +181,7 @@ class AiConfigFragment : ComposeSettingFragment() {
                             title = getString(R.string.ai_image_gallery),
                             summary = getString(R.string.ai_image_gallery_summary),
                             onClick = {
-                                startActivity(Intent(requireContext(), AiImageGalleryActivity::class.java))
+                                AiUnifiedGalleryActivity.start(requireContext())
                             }
                         ),
                         SettingActionSpec(
@@ -188,7 +189,15 @@ class AiConfigFragment : ComposeSettingFragment() {
                             title = "AI 视频库",
                             summary = "浏览和管理 AI 生成的视频",
                             onClick = {
-                                startActivity(Intent(requireContext(), AiVideoGalleryActivity::class.java))
+                                AiUnifiedGalleryActivity.start(requireContext())
+                            }
+                        ),
+                        SettingActionSpec(
+                            key = "aiGenTaskList",
+                            title = "生成任务",
+                            summary = "查看和管理 AI 生成任务队列",
+                            onClick = {
+                                startActivity(Intent(requireContext(), AiGenTaskActivity::class.java))
                             }
                         ),
                         SettingActionSpec(

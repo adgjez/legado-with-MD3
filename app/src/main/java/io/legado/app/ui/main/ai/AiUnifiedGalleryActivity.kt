@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,7 @@ import io.legado.app.help.ai.AiVideoGalleryManager
 import io.legado.app.help.ai.AiVideoGalleryManager.GalleryFilter as VideoGalleryFilter
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.ui.widget.compose.LegadoMiuixActionButton
 import io.legado.app.ui.widget.compose.LegadoMiuixCard
 import io.legado.app.ui.widget.compose.LegadoMiuixPalette
 import io.legado.app.ui.widget.compose.rememberAppDialogStyle
@@ -143,12 +145,12 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("图片") }
+                    text = { Text("图片 (${images.size})") }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("视频") }
+                    text = { Text("视频 (${videos.size})") }
                 )
             }
             when (selectedTab) {
@@ -411,11 +413,19 @@ class AiUnifiedGalleryActivity : BaseActivity<ActivityAiImageGalleryBinding>() {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = text,
-                color = palette.secondaryText,
-                fontSize = 14.sp
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = text,
+                    color = palette.secondaryText,
+                    fontSize = 14.sp
+                )
+                Spacer(Modifier.height(12.dp))
+                LegadoMiuixActionButton(
+                    text = "去创作",
+                    palette = palette,
+                    onClick = { finish() }
+                )
+            }
         }
     }
 

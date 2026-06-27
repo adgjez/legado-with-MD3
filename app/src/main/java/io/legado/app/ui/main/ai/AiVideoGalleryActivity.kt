@@ -21,19 +21,28 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +54,7 @@ import io.legado.app.base.BaseActivity
 import io.legado.app.data.entities.AiGeneratedVideo
 import io.legado.app.data.entities.AiVideoGroup
 import io.legado.app.databinding.ActivityAiVideoGalleryBinding
+import io.legado.app.help.ai.AiAssetManager
 import io.legado.app.help.ai.AiCodecCompat
 import io.legado.app.help.ai.AiVideoGalleryManager
 import io.legado.app.help.ai.AiVideoGalleryManager.GalleryFilter
@@ -73,6 +83,10 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
     private var currentFilter by mutableStateOf<GalleryFilter>(GalleryFilter.ALL)
     private var selectedIds by mutableStateOf<Set<String>>(emptySet())
     private var selectionMode by mutableStateOf(false)
+    private var searchQuery by mutableStateOf("")
+    private var hasMore by mutableStateOf(false)
+    private var pageIndex by mutableStateOf(0)
+    private val pageSize = 20
 
     companion object {
         const val EXTRA_BOOK_KEY = "bookKey"
@@ -85,6 +99,14 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
                 title?.let { putExtra(EXTRA_TITLE, it) }
             })
         }
+
+        private val sourceTypeLabels = mapOf(
+            "chat" to "聊天",
+            "read_insert" to "阅读场景",
+            "character_avatar" to "角色视频",
+            "story_mode" to "分镜",
+            "gallery" to "画廊"
+        )
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -111,52 +133,130 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
         reload()
     }
 
-    private fun reload() {
+    private fun reload(resetPagination: Boolean = true) {
+        if (resetPagination) pageIndex = 0
         lifecycleScope.launch {
+            val q = searchQuery.trim()
+            val offset = if (resetPagination) 0 else pageIndex * pageSize
             val data = withContext(Dispatchers.IO) {
                 AiVideoGalleryManager.cleanupExpiredTemporary()
                 val grps = AiVideoGalleryManager.listGroups()
-                val vids = AiVideoGalleryManager.listVideos(currentFilter)
-                grps to vids
+                val raw = if (q.isNotBlank()) {
+                    AiVideoGalleryManager.listVideos(GalleryFilter.SEARCH(q))
+                        .let { if (currentFilter !is GalleryFilter.ALL) it.filter { v -> matchesFilter(v, currentFilter) } else it }
+                } else {
+                    AiVideoGalleryManager.listVideos(currentFilter)
+                }
+                val paged = raw.drop(offset).take(pageSize)
+                grps to paged to (raw.size > offset + pageSize)
             }
-            groups = data.first
-            videos = data.second
-            val validIds = data.second.map { it.id }.toSet()
-            selectedIds = selectedIds.intersect(validIds)
+            groups = data.first.first
+            if (resetPagination) videos = data.first.second else videos = videos + data.first.second
+            hasMore = data.second
+            val validIds = data.first.second.map { it.id }.toSet()
+            if (resetPagination) selectedIds = selectedIds.intersect(validIds)
             if (selectedIds.isEmpty()) selectionMode = false
         }
+    }
+
+    private fun loadMore() {
+        if (hasMore) {
+            pageIndex++
+            reload(resetPagination = false)
+        }
+    }
+
+    private fun matchesFilter(video: AiGeneratedVideo, filter: GalleryFilter): Boolean = when (filter) {
+        is GalleryFilter.TEMPORARY -> !video.favorite
+        is GalleryFilter.FAVORITE -> video.favorite
+        is GalleryFilter.GROUP -> video.groupId == filter.groupId && video.favorite
+        is GalleryFilter.BOOK -> video.bookKey == filter.bookKey
+        is GalleryFilter.SOURCE_TYPE -> video.sourceType == filter.sourceType
+        else -> true
     }
 
     @Composable
     private fun VideoGalleryScreen() {
         val palette = rememberAppDialogStyle().toMiuixPalette()
         Column(modifier = Modifier.fillMaxSize()) {
+            SearchBar(palette)
             FilterChips(palette)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (videos.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("暂无视频", color = palette.secondaryText)
-                        }
+            if (videos.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("暂无视频", color = palette.secondaryText, fontSize = 14.sp)
+                        Spacer(Modifier.height(12.dp))
+                        LegadoMiuixActionButton(
+                            text = "去创作",
+                            palette = palette,
+                            onClick = { finish() }
+                        )
                     }
                 }
-                items(videos, key = { it.id }) { video ->
-                    VideoGridItem(video, palette)
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(videos, key = { it.id }) { video ->
+                        VideoGridItem(video, palette)
+                    }
+                    if (hasMore) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LegadoMiuixActionButton(
+                                    text = "加载更多",
+                                    palette = palette,
+                                    onClick = { loadMore() }
+                                )
+                            }
+                        }
+                    }
                 }
             }
             if (selectionMode && selectedIds.isNotEmpty()) {
                 BatchActionBar(palette)
             }
         }
+    }
+
+    @Composable
+    private fun SearchBar(palette: LegadoMiuixPalette) {
+        var text by remember { mutableStateOf(searchQuery) }
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            placeholder = { Text("搜索视频...", fontSize = 14.sp, color = palette.secondaryText) },
+            leadingIcon = { Icon(Icons.Default.Search, "搜索", tint = palette.secondaryText) },
+            trailingIcon = {
+                if (text.isNotEmpty()) {
+                    IconButton(onClick = { text = ""; searchQuery = ""; reload() }) {
+                        Icon(Icons.Default.Clear, "清除", tint = palette.secondaryText)
+                    }
+                }
+            },
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = palette.accent,
+                unfocusedBorderColor = palette.surfaceVariant,
+                focusedTextColor = palette.primaryText,
+                unfocusedTextColor = palette.primaryText,
+                cursorColor = palette.accent
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { searchQuery = text; reload() }),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 
     @Composable
@@ -169,37 +269,27 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             GalleryFilterChip("全部", currentFilter == GalleryFilter.ALL, palette) {
-                currentFilter = GalleryFilter.ALL
-                reload()
+                currentFilter = GalleryFilter.ALL; searchQuery = ""; reload()
             }
             GalleryFilterChip("临时", currentFilter == GalleryFilter.TEMPORARY, palette) {
-                currentFilter = GalleryFilter.TEMPORARY
-                reload()
+                currentFilter = GalleryFilter.TEMPORARY; searchQuery = ""; reload()
             }
             GalleryFilterChip("收藏", currentFilter == GalleryFilter.FAVORITE, palette) {
-                currentFilter = GalleryFilter.FAVORITE
-                reload()
+                currentFilter = GalleryFilter.FAVORITE; searchQuery = ""; reload()
             }
             if (fixedBookKey.isNotBlank()) {
-                GalleryFilterChip(
-                    "本书",
-                    currentFilter is GalleryFilter.BOOK &&
-                        (currentFilter as GalleryFilter.BOOK).bookKey == fixedBookKey,
-                    palette
-                ) {
-                    currentFilter = GalleryFilter.BOOK(fixedBookKey)
-                    reload()
+                GalleryFilterChip("本书", currentFilter.let { it is GalleryFilter.BOOK && it.bookKey == fixedBookKey }, palette) {
+                    currentFilter = GalleryFilter.BOOK(fixedBookKey); searchQuery = ""; reload()
+                }
+            }
+            sourceTypeLabels.forEach { (type, label) ->
+                GalleryFilterChip(label, currentFilter.let { it is GalleryFilter.SOURCE_TYPE && it.sourceType == type }, palette) {
+                    currentFilter = GalleryFilter.SOURCE_TYPE(type); searchQuery = ""; reload()
                 }
             }
             groups.forEach { group ->
-                GalleryFilterChip(
-                    group.name,
-                    currentFilter is GalleryFilter.GROUP &&
-                        (currentFilter as GalleryFilter.GROUP).groupId == group.id,
-                    palette
-                ) {
-                    currentFilter = GalleryFilter.GROUP(group.id)
-                    reload()
+                GalleryFilterChip(group.name, currentFilter.let { it is GalleryFilter.GROUP && it.groupId == group.id }, palette) {
+                    currentFilter = GalleryFilter.GROUP(group.id); searchQuery = ""; reload()
                 }
             }
         }
@@ -412,6 +502,21 @@ class AiVideoGalleryActivity : BaseActivity<ActivityAiVideoGalleryBinding>() {
                             AiVideoGalleryManager.setFavorite(video.id, !video.favorite, null)
                         }
                         reload()
+                    }
+                }
+                items(listOf("导出")) {
+                    lifecycleScope.launch {
+                        val file = withContext(Dispatchers.IO) {
+                            AiVideoGalleryManager.resolveVideoFile(AiVideoGalleryManager.videoUri(video.id))
+                        }
+                        if (file != null) {
+                            val ok = withContext(Dispatchers.IO) {
+                                AiAssetManager.exportToMediaStore(file, "video/mp4", video.name + ".mp4")
+                            }
+                            toastOnUi(if (ok) "已导出到系统相册" else "导出失败")
+                        } else {
+                            toastOnUi("视频文件不存在")
+                        }
                     }
                 }
             }

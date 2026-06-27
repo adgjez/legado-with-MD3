@@ -49,4 +49,7 @@ interface AiGenTaskDao {
 
     @Query("delete from ai_gen_tasks where createdAt < :cutoff and status in ('done','failed','cancelled')")
     fun deleteOlderThan(cutoff: Long)
+
+    @Query("select * from ai_gen_tasks order by createdAt desc limit 100")
+    fun recent(): List<AiGenTask>
 }
