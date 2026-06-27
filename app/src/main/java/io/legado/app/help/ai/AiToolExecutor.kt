@@ -162,18 +162,6 @@ internal object AiToolExecutor {
         }
     }
 
-    // Tools that support fire-and-forget async submission (return a task id immediately).
-    private val videoToolNames = setOf(
-        "generate_video",
-        "generate_video_from_image",
-        "generate_video_keyframes",
-        "generate_video_multi_image",
-        "continue_video_from_frame",
-        "generate_scene_video",
-        "generate_character_video",
-        "generate_gallery_video"
-    )
-
     private const val STORY_PIPELINE_TIMEOUT_MILLIS = 1_800_000L // 30 min
 
     /**
