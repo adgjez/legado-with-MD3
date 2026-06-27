@@ -791,7 +791,13 @@ object ReadBook : CoroutineScope by MainScope() {
         Coroutine.async {
             val book = book!!
             refreshParagraphRuleLayoutKey()
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: return@async
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index)
+            if (chapter == null) {
+                if (index == durChapterIndex) {
+                    upMsg("章节不存在")
+                }
+                return@async
+            }
             if (addLoading(index)) {
                 BookHelp.getContent(book, chapter)?.let {
                     contentLoadFinish(

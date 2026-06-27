@@ -268,8 +268,9 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                         return false
                     }
             }
+            ReadBook.upMsg(context.getString(R.string.error_no_source))
+            return false
         }
-        return true
     }
 
     /**
