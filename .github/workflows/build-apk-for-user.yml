@@ -1,6 +1,9 @@
 name: Build APK for User
 
 on:
+  push:
+    branches:
+      - video-full-v3
   workflow_dispatch:
     inputs:
       branch:
